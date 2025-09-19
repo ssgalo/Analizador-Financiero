@@ -1,0 +1,19 @@
+Título de la app: Analizador Financiero
+Objetivo: Analizar movimientos de gastos en general (ya sea de billeteras virtuales, resumenes de tarjetas, home banking, etc.)
+y dar recomendaciones para ahorrar.
+Características: 
+- Que sea capaz de clasificar gastos en base a el movimiento. Que haya una IA que entienda el contexto de la transferencia
+y ayude a clasificar.
+- Como billetera virtual inicial usaremos MercadoPago integrandonos con su API y MCP.
+- Que el usuario sea capaz de importar pdfs, imagenes y la aplicación reconozca los gastos, total, recomendación.
+- Que haya un chat integrado con IA al que se le pueda hacer preguntas de nuestros gastos, que sea capaz de analizarlo. 
+Por ejemplo: "Qué fecha hice el gasto de la panadería josé? ¿Cuál fue el día que más gasté en el mes de septiembre?
+- Además de poder importarse a través de imagenes, que exista la posibilidad de utilizar un ABM común para los gastos.
+- Que haya un módulo especifico sobre reportes con gráficos y distintas métricas.
+- Para la integración con IA vamos a usar AZURE OPEN API 
+- Vamos a desarrollar todas las fases del ciclo de vida: Analisis, Diseño, Desarrollo, Pruebas, Implementación
+- Nuestra modelo de ciclo de vida es incremental agile y para relevar requisitos usamos: Epics, Features y User Stories.
+
+
+
+
