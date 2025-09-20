@@ -1,0 +1,147 @@
+DerDiagram
+    USUARIOS {
+        int id_usuario PK
+        string nombre
+        string email
+        string usuario
+        string contraseña
+        datetime fecha_creacion
+        json preferencias
+        datetime ultimo_login
+        enum estado
+    }
+    
+    CATEGORIAS {
+        int id_categoria PK
+        string nombre
+        string descripcion
+        boolean es_personalizada
+        int id_usuario FK
+        string icono
+        string color
+        boolean activa
+    }
+    
+    GASTOS {
+        int id_gasto PK
+        int id_usuario FK
+        int id_categoria FK
+        date fecha
+        decimal monto
+        string descripcion
+        string comercio
+        enum fuente
+        int id_archivo_importado FK
+        enum estado
+        datetime fecha_creacion
+        datetime fecha_modificacion
+        string categoria_ia_sugerida
+        decimal confianza_ia
+        string moneda
+    }
+    
+    ARCHIVOS_IMPORTADOS {
+        int id_archivo_importado PK
+        int id_usuario FK
+        enum tipo
+        string ruta_archivo
+        datetime fecha_importacion
+        enum estado_procesamiento
+        json resultado_ocr
+    }
+    
+    INTEGRACIONES {
+        int id_integracion PK
+        int id_usuario FK
+        enum tipo
+        enum estado
+        datetime fecha_vinculacion
+        json datos_credenciales
+        datetime ultima_sincronizacion
+        datetime proxima_sincronizacion
+        json config_sincronizacion
+    }
+    
+    OBJETIVOS_FINANCIEROS {
+        int id_objetivo PK
+        int id_usuario FK
+        string descripcion
+        decimal monto
+        date fecha_inicio
+        date fecha_fin
+        enum estado
+    }
+    
+    PRESUPUESTOS {
+        int id_presupuesto PK
+        int id_usuario FK
+        int id_categoria FK
+        string nombre
+        decimal monto_limite
+        enum periodo
+        date fecha_inicio
+        boolean activo
+    }
+    
+    ALERTAS {
+        int id_alerta PK
+        int id_usuario FK
+        enum tipo
+        string mensaje
+        datetime fecha_creacion
+        boolean leida
+    }
+    
+    SESIONES_CHAT {
+        int id_sesion PK
+        int id_usuario FK
+        string titulo
+        datetime fecha_inicio
+        datetime fecha_ultima_actividad
+    }
+    
+    CHATS {
+        int id_chat PK
+        int id_sesion FK
+        datetime fecha
+        text mensaje_usuario
+        text respuesta_ia
+    }
+    
+    REPORTES {
+        int id_reporte PK
+        int id_usuario FK
+        enum tipo
+        datetime fecha_generacion
+        string archivo
+        json parametros
+    }
+    
+    LOGS_ACTIVIDAD {
+        int id_log PK
+        int id_usuario FK
+        datetime fecha
+        enum tipo_evento
+        string descripcion
+        json metadatos
+    }
+
+    %% Relaciones
+    USUARIOS ||--o{ CATEGORIAS : "crea categorías personalizadas"
+    USUARIOS ||--o{ GASTOS : "registra"
+    USUARIOS ||--o{ ARCHIVOS_IMPORTADOS : "sube"
+    USUARIOS ||--o{ INTEGRACIONES : "configura"
+    USUARIOS ||--o{ OBJETIVOS_FINANCIEROS : "define"
+    USUARIOS ||--o{ PRESUPUESTOS : "establece"
+    USUARIOS ||--o{ ALERTAS : "recibe"
+    USUARIOS ||--o{ SESIONES_CHAT : "inicia"
+    USUARIOS ||--o{ REPORTES : "genera"
+    USUARIOS ||--o{ LOGS_ACTIVIDAD : "produce"
+    
+    CATEGORIAS ||--o{ GASTOS : "clasifica"
+    CATEGORIAS ||--o{ PRESUPUESTOS : "limita"
+    
+    ARCHIVOS_IMPORTADOS ||--o{ GASTOS : "origina"
+    INTEGRACIONES ||--o{ GASTOS : "sincroniza"
+    
+    SESIONES_CHAT ||--o{ CHATS : "contiene"

@@ -1,0 +1,135 @@
+/**
+ * Variables CSS personalizadas para el Analizador Financiero
+ * Estas variables pueden ser usadas en cualquier parte de la aplicación
+ */
+
+:root {
+  /* Colores principales */
+  --color-primary: #14b8a6;
+  --color-primary-hover: #0f766e;
+  --color-primary-light: #2dd4bf;
+  
+  --color-coral: #EF5B5B;
+  --color-coral-light: #fca5a5;
+  --color-coral-dark: #dc2626;
+  
+  --color-golden: #FFBA49;
+  --color-golden-light: #fcd34d;
+  --color-golden-dark: #d97706;
+
+  /* Colores de categorías */
+  --color-alimentacion: #20A39E;
+  --color-transporte: #0C7489;
+  --color-vivienda: #FFBA49;
+  --color-entretenimiento: #EF5B5B;
+  --color-compras: #13505B;
+  --color-salud: #A78BFA;
+  --color-educacion: #F59E0B;
+  --color-servicios: #8B5CF6;
+
+  /* Colores neutros */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+
+  /* Colores de estado */
+  --color-success: #22c55e;
+  --color-success-bg: #f0fdf4;
+  --color-error: #ef4444;
+  --color-error-bg: #fef2f2;
+  --color-warning: #f97316;
+  --color-warning-bg: #fffbeb;
+  --color-info: #3b82f6;
+  --color-info-bg: #eff6ff;
+
+  /* Colores de hover */
+  --color-hover-light: #f1f5f9;
+  --color-hover-border: #94a3b8;
+  --color-hover-border-light: #e2e8f0;
+}
+
+/* Clases utilitarias personalizadas */
+.text-teal {
+  color: var(--color-primary);
+}
+
+.text-coral {
+  color: var(--color-coral);
+}
+
+.text-golden {
+  color: var(--color-golden);
+}
+
+.bg-teal {
+  background-color: var(--color-primary);
+}
+
+.bg-coral {
+  background-color: var(--color-coral);
+}
+
+.bg-golden {
+  background-color: var(--color-golden);
+}
+
+.border-teal {
+  border-color: var(--color-primary);
+}
+
+/* Efectos hover consistentes */
+.hover-light:hover {
+  background-color: var(--color-hover-light);
+  border-color: var(--color-hover-border);
+  transition: all 0.2s ease-in-out;
+}
+
+.hover-primary:hover {
+  background-color: var(--color-primary-hover);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Clases para botones personalizados */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--color-gray-300);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline:hover {
+  background-color: var(--color-hover-light);
+  border-color: var(--color-hover-border);
+}
+
+/* Clases para categorías */
+.category-alimentacion { color: var(--color-alimentacion); }
+.category-transporte { color: var(--color-transporte); }
+.category-vivienda { color: var(--color-vivienda); }
+.category-entretenimiento { color: var(--color-entretenimiento); }
+.category-compras { color: var(--color-compras); }
+.category-salud { color: var(--color-salud); }
+.category-educacion { color: var(--color-educacion); }
+.category-servicios { color: var(--color-servicios); }

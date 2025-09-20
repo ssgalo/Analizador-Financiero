@@ -124,12 +124,12 @@ export default function ImportarPage() {
                     {/* Actions */}
                     <div className="flex space-x-2">
                       {upload.status === "procesado" && (
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="hover:bg-gray-100 transition-colors duration-200">
                           Ver Gastos
                         </Button>
                       )}
                       {upload.status === "error" && (
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="hover:bg-gray-100 transition-colors duration-200">
                           Reintentar
                         </Button>
                       )}

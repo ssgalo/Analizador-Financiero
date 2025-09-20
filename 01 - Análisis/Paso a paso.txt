@@ -81,3 +81,6 @@ EPIC E3: Integración con billeteras virtuales y bancos
     - User Story 3.2.2: Como usuario, quiero que la app me informe qué fuentes de datos están disponibles para integración.
 
 4. Para loguearnos en Azure Devops tuvimos que generar un token
+
+Diseño
+Usamos Claude.ia, plant uml para el diagrama de clases y mermaid para el der

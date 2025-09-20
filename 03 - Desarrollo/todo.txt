@@ -1,0 +1,4 @@
+Registro y Login
+integracion con google
+cargar un archivo para extraer gastos
+chat ia

@@ -18,53 +18,76 @@ import {
   Car,
   Coffee,
   Smartphone,
+  Heart,
+  Book,
+  Wifi,
+  RefreshCw,
+  Loader2
 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
+import { useDashboard } from "../hooks/useDashboard"
+import { formatCurrency, formatDisplayDate } from "../utils/formatters"
 
-const monthlyData = [
-  { month: "Ene", gastos: 45000, ingresos: 80000 },
-  { month: "Feb", gastos: 52000, ingresos: 80000 },
-  { month: "Mar", gastos: 48000, ingresos: 80000 },
-  { month: "Abr", gastos: 61000, ingresos: 80000 },
-  { month: "May", gastos: 55000, ingresos: 80000 },
-  { month: "Jun", gastos: 67000, ingresos: 80000 },
-]
 
-const categoryData = [
-  { name: "Alimentación", value: 25000, color: "#20A39E", icon: Coffee },
-  { name: "Transporte", value: 15000, color: "#0C7489", icon: Car },
-  { name: "Vivienda", value: 35000, color: "#FFBA49", icon: HomeIcon },
-  { name: "Entretenimiento", value: 8000, color: "#EF5B5B", icon: Smartphone },
-  { name: "Compras", value: 12000, color: "#13505B", icon: ShoppingCart },
-]
 
-const recentTransactions = [
-  {
-    id: 1,
-    description: "Supermercado Disco",
-    amount: -4500,
-    category: "Alimentación",
-    date: "2024-01-15",
-    type: "expense",
-  },
-  { id: 2, description: "Sueldo", amount: 80000, category: "Ingresos", date: "2024-01-01", type: "income" },
-  { id: 3, description: "Uber", amount: -1200, category: "Transporte", date: "2024-01-14", type: "expense" },
-  { id: 4, description: "Netflix", amount: -2500, category: "Entretenimiento", date: "2024-01-13", type: "expense" },
-]
+
 
 function Home() {
-  const totalGastos = 67000
-  const totalIngresos = 80000
-  const ahorro = totalIngresos - totalGastos
-  const porcentajeAhorro = (ahorro / totalIngresos) * 100
+  const { 
+    usuario, 
+    gastos, 
+    estadisticas, 
+    recomendaciones, 
+    isLoading, 
+    error, 
+    refreshData 
+  } = useDashboard();
+
+  if (isLoading) {
+    return (
+      <div className="p-6 bg-background min-h-full flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin text-teal" />
+          <span className="text-lg">Cargando dashboard...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 bg-background min-h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Error: {error}</p>
+          <Button onClick={refreshData} variant="outline" className="hover:bg-slate-100 hover:border-slate-300">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalGastos = estadisticas?.totalGastos || 0;
+  const totalIngresos = estadisticas?.totalIngresos || 0;
+  const ahorro = totalIngresos - totalGastos;
+  const porcentajeAhorro = totalIngresos > 0 ? (ahorro / totalIngresos) * 100 : 0;
 
   return (
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-7xl mx-auto">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Bienvenido de vuelta, Juan</h2>
-          <p className="text-gray-600">Aquí tienes un resumen de tu situación financiera actual</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground mb-2">
+              Bienvenido de vuelta, {usuario?.nombre || 'Usuario'}
+            </h2>
+            <p className="text-gray-600">Aquí tienes un resumen de tu situación financiera actual</p>
+          </div>
+          <Button onClick={refreshData} variant="outline" size="sm" className="hover:bg-slate-100 hover:border-slate-300">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Actualizar
+          </Button>
         </div>
 
         {/* Key Metrics */}
@@ -75,7 +98,7 @@ function Home() {
               <TrendingDown className="h-4 w-4 text-coral" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalGastos.toLocaleString()}</div>
+              <div className="text-2xl font-bold">${formatCurrency(totalGastos)}</div>
               <p className="text-xs text-gray-600">
                 <span className="text-coral">+12%</span> vs mes anterior
               </p>
@@ -88,7 +111,7 @@ function Home() {
               <TrendingUp className="h-4 w-4 text-teal" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalIngresos.toLocaleString()}</div>
+              <div className="text-2xl font-bold">${formatCurrency(totalIngresos)}</div>
               <p className="text-xs text-gray-600">
                 <span className="text-teal">Estable</span> vs mes anterior
               </p>
@@ -101,8 +124,12 @@ function Home() {
               <Wallet className="h-4 w-4 text-golden" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${ahorro.toLocaleString()}</div>
-              <p className="text-xs text-gray-600">{porcentajeAhorro.toFixed(1)}% de tus ingresos</p>
+              <div className="text-2xl font-bold text-{ahorro >= 0 ? 'teal' : 'coral'}">
+                ${formatCurrency(Math.abs(ahorro))}
+              </div>
+              <p className="text-xs text-gray-600">
+                {ahorro >= 0 ? `${porcentajeAhorro.toFixed(1).replace('.', ',')}% de tus ingresos` : 'Déficit este mes'}
+              </p>
             </CardContent>
           </Card>
 
@@ -129,9 +156,9 @@ function Home() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={monthlyData}>
+                <AreaChart data={estadisticas?.tendenciaMensual || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
-                  <XAxis dataKey="month" stroke="rgb(var(--muted-foreground))" />
+                  <XAxis dataKey="mes" stroke="rgb(var(--muted-foreground))" />
                   <YAxis stroke="rgb(var(--muted-foreground))" />
                   <Area
                     type="monotone"
@@ -162,9 +189,34 @@ function Home() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {categoryData.map((category, index) => {
-                  const IconComponent = category.icon
-                  const percentage = (category.value / totalGastos) * 100
+                {estadisticas?.gastosPorCategoria.map((category, index) => {
+                  const percentage = totalGastos > 0 ? (category.total / totalGastos) * 100 : 0;
+                  // Mapeo simple de iconos basado en el nombre de la categoría
+                  let IconComponent = ShoppingCart; // icono por defecto
+                  switch (category.categoria.toLowerCase()) {
+                    case 'alimentación':
+                      IconComponent = Coffee;
+                      break;
+                    case 'transporte':
+                      IconComponent = Car;
+                      break;
+                    case 'vivienda':
+                      IconComponent = HomeIcon;
+                      break;
+                    case 'entretenimiento':
+                      IconComponent = Smartphone;
+                      break;
+                    case 'salud':
+                      IconComponent = Heart;
+                      break;
+                    case 'educación':
+                      IconComponent = Book;
+                      break;
+                    case 'servicios':
+                      IconComponent = Wifi;
+                      break;
+                  }
+                  
                   return (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
@@ -174,15 +226,15 @@ function Home() {
                         >
                           <IconComponent className="w-4 h-4" style={{ color: category.color }} />
                         </div>
-                        <span className="font-medium">{category.name}</span>
+                        <span className="font-medium">{category.categoria}</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">${category.value.toLocaleString()}</div>
-                        <div className="text-sm text-gray-600">{percentage.toFixed(1)}%</div>
+                        <div className="font-semibold">${formatCurrency(category.total)}</div>
+                        <div className="text-sm text-gray-600">{percentage.toFixed(1).replace('.', ',')}%</div>
                       </div>
                     </div>
                   )
-                })}
+                }) || []}
               </div>
             </CardContent>
           </Card>
@@ -198,25 +250,47 @@ function Home() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Link to="/importar">
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button 
+                  className="w-full justify-start bg-transparent transition-all duration-200" 
+                  variant="outline"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                >
                   <Upload className="w-4 h-4 mr-2" />
                   Importar Gastos
                 </Button>
               </Link>
               <Link to="/chat">
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button 
+                  className="w-full justify-start bg-transparent transition-all duration-200" 
+                  variant="outline"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Chat con IA
                 </Button>
               </Link>
               <Link to="/reportes">
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button className="w-full justify-start bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Ver Reportes
                 </Button>
               </Link>
               <Link to="/integraciones">
-                <Button className="w-full justify-start bg-transparent" variant="outline">
+                <Button className="w-full justify-start bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
                   <CreditCard className="w-4 h-4 mr-2" />
                   Conectar Cuenta
                 </Button>
@@ -232,44 +306,34 @@ function Home() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{
-                          backgroundColor: transaction.type === "income" ? "#20A39E20" : "#EF5B5B20",
-                        }}
-                      >
-                        {transaction.type === "income" ? (
-                          <TrendingUp className="w-5 h-5 text-teal" />
-                        ) : (
+                {gastos.slice(0, 4).map((gasto) => {
+                  return (
+                    <div
+                      key={gasto.id_gasto}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coral/20">
                           <TrendingDown className="w-5 h-5 text-coral" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium">{transaction.description}</div>
-                        <div className="text-sm text-gray-600 flex items-center space-x-2">
-                          <span>{transaction.category}</span>
-                          <span>•</span>
-                          <span>{transaction.date}</span>
+                        </div>
+                        <div>
+                          <div className="font-medium">{gasto.comercio}</div>
+                          <div className="text-sm text-gray-600 flex items-center space-x-2">
+                            <span>{gasto.categoria?.nombre || 'Sin categoría'}</span>
+                            <span>•</span>
+                            <span>{formatDisplayDate(gasto.fecha)}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="font-semibold text-coral">
+                        -${formatCurrency(gasto.monto)}
+                      </div>
                     </div>
-                    <div
-                      className="font-semibold"
-                      style={{ color: transaction.type === "income" ? "#20A39E" : undefined }}
-                    >
-                      {transaction.type === "income" ? "+" : ""}${Math.abs(transaction.amount).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
               <Link to="/gastos">
-                <Button variant="outline" className="w-full mt-4 bg-transparent">
+                <Button variant="outline" className="w-full mt-4 bg-transparent hover:bg-slate-100 hover:border-slate-300">
                   Ver Todas las Transacciones
                 </Button>
               </Link>
@@ -288,31 +352,48 @@ function Home() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg border bg-teal/20 border-teal/40">
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-teal" />
-                  <span className="font-medium text-teal">Oportunidad de Ahorro</span>
-                </div>
-                <p className="text-sm text-foreground">
-                  Podrías ahorrar $3,500 reduciendo gastos en entretenimiento este mes.
-                </p>
-              </div>
+              {recomendaciones.map((recomendacion) => {
+                let IconComponent = PieChart;
+                let colorClass = "text-blue-600";
+                let bgClass = "bg-blue-50 border-blue-200";
+                
+                switch (recomendacion.tipo) {
+                  case 'ahorro':
+                    IconComponent = TrendingUp;
+                    colorClass = "text-teal";
+                    bgClass = "bg-teal/20 border-teal/40";
+                    break;
+                  case 'recordatorio':
+                    IconComponent = Calendar;
+                    colorClass = "text-amber-600";
+                    bgClass = "bg-amber-50 border-amber-200";
+                    break;
+                  case 'analisis':
+                    IconComponent = PieChart;
+                    colorClass = "text-blue-600";
+                    bgClass = "bg-blue-50 border-blue-200";
+                    break;
+                  case 'alerta':
+                    IconComponent = TrendingDown;
+                    colorClass = "text-red-600";
+                    bgClass = "bg-red-50 border-red-200";
+                    break;
+                }
 
-              <div className="p-4 rounded-lg border bg-golden/20 border-golden/40">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Calendar className="w-4 h-4 text-golden" />
-                  <span className="font-medium text-golden">Recordatorio</span>
-                </div>
-                <p className="text-sm text-foreground">Tu suscripción de Netflix se renueva en 3 días por $2,500.</p>
-              </div>
-
-              <div className="p-4 rounded-lg border bg-dark-blue/20 border-dark-blue/40">
-                <div className="flex items-center space-x-2 mb-2">
-                  <PieChart className="w-4 h-4 text-dark-blue" />
-                  <span className="font-medium text-dark-blue">Análisis</span>
-                </div>
-                <p className="text-sm text-foreground">Tus gastos en alimentación están 15% por encima del promedio.</p>
-              </div>
+                return (
+                  <div key={recomendacion.id} className={`p-4 rounded-lg border ${bgClass}`}>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <IconComponent className={`w-4 h-4 ${colorClass}`} />
+                      <span className={`font-medium ${colorClass}`}>
+                        {recomendacion.titulo}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground">
+                      {recomendacion.mensaje}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

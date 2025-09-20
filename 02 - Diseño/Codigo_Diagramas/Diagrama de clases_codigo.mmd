@@ -1,0 +1,174 @@
+@startuml
+title Analizador Financiero - Arquitectura MVP
+
+class Usuario {
+  - id: int
+  - nombre: string
+  - email: string
+  - contraseña: string
+  - preferencias: JSON
+  - estado: string
+  + autenticar()
+  + crearCuenta()
+  + obtenerResumen()
+}
+
+class Gasto {
+  - id: int
+  - idUsuario: int
+  - idCategoria: int
+  - monto: decimal
+  - descripcion: string
+  - comercio: string
+  - fecha: Date
+  - fuente: string
+  - estado: string
+  + crear()
+  + actualizar()
+  + eliminar()
+  + clasificarConIA()
+}
+
+class Categoria {
+  - id: int
+  - nombre: string
+  - descripcion: string
+  - esPersonalizada: boolean
+  - idUsuario: int
+  + crear()
+  + obtenerGastos()
+  + calcularPromedio()
+}
+
+class ArchivoImportado {
+  - id: int
+  - idUsuario: int
+  - tipo: string
+  - rutaArchivo: string
+  - fechaImportacion: Date
+  - resultadoOCR: JSON
+  + subir()
+  + procesar()
+  + extraerDatos()
+  + generarGastos()
+}
+
+class Integracion {
+  - id: int
+  - idUsuario: int
+  - tipo: string
+  - estado: string
+  - fechaVinculacion: Date
+  - credenciales: JSON
+  + vincular()
+  + sincronizar()
+  + obtenerMovimientos()
+}
+
+class ServicioIA {
+  - apiKey: string
+  - endpoint: string
+  + clasificarGasto()
+  + extraerDatosOCR()
+  + generarRecomendaciones()
+  + procesarConsulta()
+}
+
+class ServicioMercadoPago {
+  - clientId: string
+  - clientSecret: string
+  - accessToken: string
+  + autenticar()
+  + obtenerMovimientos()
+  + sincronizarDatos()
+}
+
+class SesionChat {
+  - id: int
+  - idUsuario: int
+  - titulo: string
+  - fechaInicio: Date
+  + iniciarSesion()
+  + obtenerHistorial()
+}
+
+class Chat {
+  - id: int
+  - idSesion: int
+  - mensajeUsuario: string
+  - respuestaIA: string
+  - fecha: Date
+  + enviarMensaje()
+  + procesarConIA()
+}
+
+class Alerta {
+  - id: int
+  - idUsuario: int
+  - tipo: string
+  - mensaje: string
+  - leida: boolean
+  + crear()
+  + marcarLeida()
+}
+
+class Reporte {
+  - id: int
+  - idUsuario: int
+  - tipo: string
+  - fechaGeneracion: Date
+  + generar()
+  + exportarPDF()
+}
+
+class ObjetivoFinanciero {
+  - id: int
+  - idUsuario: int
+  - descripcion: string
+  - monto: decimal
+  - fechaInicio: Date
+  - fechaFin: Date
+  - estado: string
+  + crear()
+  + calcularProgreso()
+  + verificarCumplimiento()
+}
+
+class Presupuesto {
+  - id: int
+  - idUsuario: int
+  - idCategoria: int
+  - nombre: string
+  - montoLimite: decimal
+  - periodo: string
+  - activo: boolean
+  + crear()
+  + verificarLimite()
+  + generarAlerta()
+}
+
+' Relaciones principales - Solo las más directas
+Usuario ||--o{ Gasto : "registra"
+Usuario ||--o{ Categoria : "crea"
+Usuario ||--o{ ArchivoImportado : "sube"
+Usuario ||--o{ Integracion : "configura"
+Usuario ||--o{ SesionChat : "inicia"
+
+Categoria ||--o{ Gasto : "clasifica"
+Categoria ||--o{ Presupuesto : "limita"
+
+ArchivoImportado ||--o{ Gasto : "origina"
+Integracion ||--o{ Gasto : "sincroniza"
+
+SesionChat ||--o{ Chat : "contiene"
+
+' Dependencias con servicios
+Gasto ..> ServicioIA : "clasifica con"
+ArchivoImportado ..> ServicioIA : "procesa con"
+Integracion ..> ServicioMercadoPago : "conecta con"
+Chat ..> ServicioIA : "consulta"
+
+' Generación de alertas
+Presupuesto ..> Alerta : "genera"
+ObjetivoFinanciero ..> Alerta : "genera"
+@enduml
