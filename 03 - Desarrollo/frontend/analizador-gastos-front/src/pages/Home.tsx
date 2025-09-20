@@ -1,17 +1,15 @@
+import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
   CreditCard,
   PieChart,
   BarChart3,
   MessageSquare,
   Upload,
-  Settings,
-  Bell,
   Calendar,
   Target,
   Wallet,
@@ -61,35 +59,8 @@ function Home() {
   const porcentajeAhorro = (ahorro / totalIngresos) * 100
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-teal rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-white" />
-                </div>
-                <h1 className="text-xl font-bold text-foreground">Analizador Financiero</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Settings className="w-4 h-4" />
-              </Button>
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium">JD</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-6 py-8">
+    <div className="p-6 bg-background min-h-full">
+      <div className="max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Bienvenido de vuelta, Juan</h2>
@@ -226,22 +197,30 @@ function Home() {
               <CardDescription>Funciones más utilizadas</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start bg-transparent" variant="outline">
-                <Upload className="w-4 h-4 mr-2" />
-                Importar Gastos
-              </Button>
-              <Button className="w-full justify-start bg-transparent" variant="outline">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Chat con IA
-              </Button>
-              <Button className="w-full justify-start bg-transparent" variant="outline">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Ver Reportes
-              </Button>
-              <Button className="w-full justify-start bg-transparent" variant="outline">
-                <CreditCard className="w-4 h-4 mr-2" />
-                Conectar Cuenta
-              </Button>
+              <Link to="/importar">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importar Gastos
+                </Button>
+              </Link>
+              <Link to="/chat">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Chat con IA
+                </Button>
+              </Link>
+              <Link to="/reportes">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Ver Reportes
+                </Button>
+              </Link>
+              <Link to="/integraciones">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Conectar Cuenta
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -289,9 +268,11 @@ function Home() {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-4 bg-transparent">
-                Ver Todas las Transacciones
-              </Button>
+              <Link to="/gastos">
+                <Button variant="outline" className="w-full mt-4 bg-transparent">
+                  Ver Todas las Transacciones
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
