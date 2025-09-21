@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom"
+import { NavLink, useNavigate } from "react-router-dom"
 import {
   Home,
   Receipt,
@@ -9,7 +9,9 @@ import {
   CreditCard,
   Target,
   DollarSign,
+  LogOut,
 } from "lucide-react"
+import { useAuth } from "../../context/AuthContext"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -23,6 +25,13 @@ const navigation = [
 ]
 
 export default function Sidebar() {
+  const { userName, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r border-border">
       {/* Logo */}
@@ -62,12 +71,20 @@ export default function Sidebar() {
       <div className="border-t border-border p-4">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium">JD</span>
+            <span className="text-sm font-medium">
+              {userName?.split(' ').map(name => name[0]).join('').toUpperCase() || 'U'}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">Juan Pérez</p>
-            <p className="text-xs text-gray-500 truncate">juan@mail.com</p>
+            <p className="text-sm font-medium text-foreground truncate">{userName || 'Usuario'}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </div>

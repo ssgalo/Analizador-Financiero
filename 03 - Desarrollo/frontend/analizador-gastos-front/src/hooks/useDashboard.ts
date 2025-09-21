@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { mockApi } from '../services/mockApi';
+import { useAuth } from '../context/AuthContext';
 import type { Gasto, Categoria, Usuario, Objetivo, RecomendacionIA } from '../services/mockApi';
 
 interface DashboardData {
@@ -20,8 +21,17 @@ interface DashboardData {
 }
 
 export const useDashboard = () => {
+  const { userName } = useAuth();
   const [data, setData] = useState<DashboardData>({
-    usuario: null,
+    usuario: {
+      id_usuario: 1,
+      nombre: userName || 'Usuario',
+      email: '',
+      fecha_creacion: new Date().toISOString(),
+      preferencias: {},
+      ultimo_login: new Date().toISOString(),
+      estado: 'activo'
+    },
     gastos: [],
     categorias: [],
     objetivos: [],
@@ -31,20 +41,28 @@ export const useDashboard = () => {
     error: null
   });
 
+  useEffect(() => {
+    setData(prev => ({
+      ...prev,
+      usuario: {
+        ...prev.usuario!,
+        nombre: userName || 'Usuario'
+      }
+    }));
+  }, [userName]);
+
   const loadDashboardData = async () => {
     try {
       setData(prev => ({ ...prev, isLoading: true, error: null }));
 
       // Cargar todos los datos en paralelo
       const [
-        usuario,
         gastos,
         categorias,
         objetivos,
         recomendaciones,
         estadisticas
       ] = await Promise.all([
-        mockApi.getUsuario(),
         mockApi.getGastos({ limite: 10 }), // Solo los últimos 10 para el dashboard
         mockApi.getCategorias(),
         mockApi.getObjetivos(),
@@ -52,8 +70,8 @@ export const useDashboard = () => {
         mockApi.getEstadisticas()
       ]);
 
-      setData({
-        usuario,
+      setData(prev => ({
+        ...prev,
         gastos,
         categorias,
         objetivos,
@@ -61,7 +79,7 @@ export const useDashboard = () => {
         estadisticas,
         isLoading: false,
         error: null
-      });
+      }));
     } catch (error) {
       setData(prev => ({
         ...prev,

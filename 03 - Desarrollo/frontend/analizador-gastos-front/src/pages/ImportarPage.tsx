@@ -1,3 +1,4 @@
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Upload, FileText, Image, AlertCircle, CheckCircle } from "lucide-react"
@@ -33,6 +34,47 @@ const uploadHistory = [
 ]
 
 export default function ImportarPage() {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    handleFiles(files);
+  };
+
+  const handleFiles = (files: File[]) => {
+    const validFiles = files.filter(file => {
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      return validTypes.includes(file.type) && file.size <= maxSize;
+    });
+
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+
+    // Mostrar advertencia si algunos archivos fueron filtrados
+    if (validFiles.length < files.length) {
+      alert("Algunos archivos fueron omitidos por no cumplir con los requisitos (tipo o tamaño)");
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(event.dataTransfer.files);
+    handleFiles(files);
+  };
+
   return (
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-4xl mx-auto">
@@ -51,14 +93,48 @@ export default function ImportarPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-teal transition-colors">
+            <div
+              className={`border-2 border-dashed ${
+                isDragging ? 'border-teal bg-teal/5' : 'border-gray-300'
+              } rounded-lg p-12 text-center hover:border-teal transition-colors`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">Arrastra archivos aquí</p>
+              <p className="text-lg font-medium text-gray-700 mb-2">
+                {isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos aquí'}
+              </p>
               <p className="text-gray-500 mb-4">o</p>
-              <Button className="bg-teal hover:bg-teal/90">Seleccionar Archivos</Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                className="hidden"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              <Button 
+                className="bg-teal hover:bg-teal/90"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Seleccionar Archivos
+              </Button>
               <p className="text-xs text-gray-500 mt-4">
                 Máximo 10MB por archivo • PDF, JPG, PNG permitidos
               </p>
+              {selectedFiles.length > 0 && (
+                <div className="mt-4 text-left">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Archivos seleccionados:</p>
+                  <ul className="space-y-1">
+                    {selectedFiles.map((file, index) => (
+                      <li key={index} className="text-sm text-gray-600">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
