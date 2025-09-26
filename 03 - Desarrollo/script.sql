@@ -1,152 +1,227 @@
--- Tabla: usuarios
-CREATE TABLE usuarios (
-    id_usuario SERIAL PRIMARY KEY,
-    nombre VARCHAR(100),
-    email VARCHAR(100) UNIQUE,
-    contraseña_hash VARCHAR(255),
-    fecha_creacion TIMESTAMP,
-    preferencias TEXT,
-    ultimo_login TIMESTAMP,
-    estado VARCHAR(20)
+-- ##############################################
+-- ## FASE 1: CREACIÓN DE TABLAS               ##
+-- ##############################################
+-- Se crean las tablas sin relaciones primero
+
+PRINT 'Creando la tabla USUARIOS...';
+CREATE TABLE USUARIOS (
+    id_usuario INT PRIMARY KEY IDENTITY(1,1),
+    nombre NVARCHAR(100) NOT NULL,
+    email NVARCHAR(100) NOT NULL UNIQUE,
+    usuario NVARCHAR(50) NOT NULL UNIQUE,
+    contraseña NVARCHAR(255) NOT NULL,
+    fecha_creacion DATETIME2 DEFAULT GETDATE(),
+    preferencias NVARCHAR(MAX),
+    ultimo_login DATETIME2,
+    estado NVARCHAR(20) CHECK (estado IN ('activo', 'inactivo', 'pendiente'))
 );
 
-INSERT INTO usuarios (nombre, email, contraseña_hash, fecha_creacion, preferencias, ultimo_login, estado) VALUES
-('Juan Pérez', 'juan@mail.com', 'hash1', NOW(), '{"tema":"oscuro"}', NOW(), 'activo'),
-('Ana López', 'ana@mail.com', 'hash2', NOW(), '{"tema":"claro"}', NOW(), 'activo');
-
--- Tabla: categorias
-CREATE TABLE categorias (
-    id_categoria SERIAL PRIMARY KEY,
-    nombre VARCHAR(50),
-    descripcion TEXT,
-    es_personalizada BOOLEAN,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario)
+PRINT 'Creando la tabla CATEGORIAS...';
+CREATE TABLE CATEGORIAS (
+    id_categoria INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT, -- FK a USUARIOS (puede ser NULL para categorías globales)
+    nombre NVARCHAR(100) NOT NULL,
+    descripcion NVARCHAR(255),
+    es_personalizada BIT NOT NULL DEFAULT 0,
+    icono NVARCHAR(50),
+    color NVARCHAR(20),
+    activa BIT NOT NULL DEFAULT 1
 );
 
-INSERT INTO categorias (nombre, descripcion, es_personalizada, id_usuario) VALUES
-('Supermercado', 'Compras en supermercados', FALSE, NULL),
-('Transporte', 'Gastos de transporte', FALSE, NULL),
-('Comida rápida', 'Pedidos de comida', TRUE, 1);
-
--- Tabla: archivos_importados
-CREATE TABLE archivos_importados (
-    id_archivo_importado SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    tipo VARCHAR(20),
-    ruta_archivo VARCHAR(255),
-    fecha_importacion TIMESTAMP,
-    estado_procesamiento VARCHAR(20),
-    resultado_ocr TEXT
+PRINT 'Creando la tabla ARCHIVOS_IMPORTADOS...';
+CREATE TABLE ARCHIVOS_IMPORTADOS (
+    id_archivo_importado INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    tipo NVARCHAR(20) CHECK (tipo IN ('pdf', 'imagen', 'csv')),
+    ruta_archivo NVARCHAR(500) NOT NULL,
+    fecha_importacion DATETIME2 DEFAULT GETDATE(),
+    estado_procesamiento NVARCHAR(20) CHECK (estado_procesamiento IN ('pendiente', 'procesando', 'procesado', 'error')),
+    resultado_ocr NVARCHAR(MAX)
 );
 
-INSERT INTO archivos_importados (id_usuario, tipo, ruta_archivo, fecha_importacion, estado_procesamiento, resultado_ocr) VALUES
-(1, 'PDF', '/archivos/recibo1.pdf', NOW(), 'procesado', '{"monto":1200,"comercio":"Supermercado"}'),
-(2, 'imagen', '/archivos/ticket2.jpg', NOW(), 'pendiente', NULL);
-
--- Tabla: gastos
-CREATE TABLE gastos (
-    id_gasto SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    fecha DATE,
-    monto NUMERIC(12,2),
-    descripcion TEXT,
-    comercio VARCHAR(100),
-    id_categoria INTEGER REFERENCES categorias(id_categoria),
-    fuente VARCHAR(30),
-    id_archivo_importado INTEGER REFERENCES archivos_importados(id_archivo_importado),
-    estado VARCHAR(20),
-    fecha_creacion TIMESTAMP,
-    fecha_modificacion TIMESTAMP
+PRINT 'Creando la tabla GASTOS...';
+CREATE TABLE GASTOS (
+    id_gasto INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    id_categoria INT NOT NULL, -- FK a CATEGORIAS
+    id_archivo_importado INT, -- FK a ARCHIVOS_IMPORTADOS (puede ser NULL)
+    fecha DATE NOT NULL,
+    monto DECIMAL(18, 2) NOT NULL,
+    descripcion NVARCHAR(255),
+    comercio NVARCHAR(100),
+    fuente NVARCHAR(20) CHECK (fuente IN ('manual', 'importado', 'integracion')),
+    estado NVARCHAR(20) CHECK (estado IN ('confirmado', 'pendiente', 'eliminado')),
+    fecha_creacion DATETIME2 DEFAULT GETDATE(),
+    fecha_modificacion DATETIME2,
+    categoria_ia_sugerida NVARCHAR(100),
+    confianza_ia DECIMAL(5, 4),
+    moneda NVARCHAR(10) DEFAULT 'ARS'
 );
 
-INSERT INTO gastos (id_usuario, fecha, monto, descripcion, comercio, id_categoria, fuente, id_archivo_importado, estado, fecha_creacion, fecha_modificacion) VALUES
-(1, '2025-09-01', 1200.00, 'Compra mensual', 'Supermercado', 1, 'PDF', 1, 'activo', NOW(), NOW()),
-(2, '2025-09-02', 500.00, 'Taxi al aeropuerto', 'Taxi BA', 2, 'manual', NULL, 'activo', NOW(), NOW());
-
--- Tabla: integraciones
-CREATE TABLE integraciones (
-    id_integracion SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    tipo VARCHAR(30),
-    estado VARCHAR(20),
-    fecha_vinculacion TIMESTAMP,
-    datos_credenciales TEXT
+PRINT 'Creando la tabla INTEGRACIONES...';
+CREATE TABLE INTEGRACIONES (
+    id_integracion INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    tipo NVARCHAR(50) CHECK (tipo IN ('mercadopago', 'uala', 'banco_galicia')),
+    estado NVARCHAR(20) CHECK (estado IN ('activa', 'inactiva', 'error')),
+    fecha_vinculacion DATETIME2 DEFAULT GETDATE(),
+    datos_credenciales NVARCHAR(MAX), -- Considerar cifrado para esto
+    ultima_sincronizacion DATETIME2,
+    proxima_sincronizacion DATETIME2,
+    config_sincronizacion NVARCHAR(MAX)
 );
 
-INSERT INTO integraciones (id_usuario, tipo, estado, fecha_vinculacion, datos_credenciales) VALUES
-(1, 'MercadoPago', 'activa', NOW(), '{"token":"abc123"}');
-
--- Tabla: objetivos_financieros
-CREATE TABLE objetivos_financieros (
-    id_objetivo SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    descripcion TEXT,
-    monto NUMERIC(12,2),
+PRINT 'Creando la tabla OBJETIVOS_FINANCIEROS...';
+CREATE TABLE OBJETIVOS_FINANCIEROS (
+    id_objetivo INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    descripcion NVARCHAR(255) NOT NULL,
+    monto DECIMAL(18, 2) NOT NULL,
     fecha_inicio DATE,
     fecha_fin DATE,
-    estado VARCHAR(20)
+    estado NVARCHAR(20) CHECK (estado IN ('en_progreso', 'completado', 'cancelado'))
 );
 
-INSERT INTO objetivos_financieros (id_usuario, descripcion, monto, fecha_inicio, fecha_fin, estado) VALUES
-(1, 'Ahorro vacaciones', 50000, '2025-01-01', '2025-12-31', 'en progreso');
-
--- Tabla: alertas
-CREATE TABLE alertas (
-    id_alerta SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    tipo VARCHAR(30),
-    mensaje TEXT,
-    fecha_creacion TIMESTAMP,
-    leida BOOLEAN
+PRINT 'Creando la tabla PRESUPUESTOS...';
+CREATE TABLE PRESUPUESTOS (
+    id_presupuesto INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    id_categoria INT NOT NULL, -- FK a CATEGORIAS
+    nombre NVARCHAR(100) NOT NULL,
+    monto_limite DECIMAL(18, 2) NOT NULL,
+    periodo NVARCHAR(20) CHECK (periodo IN ('semanal', 'mensual', 'anual')),
+    fecha_inicio DATE NOT NULL,
+    activo BIT DEFAULT 1
 );
 
-INSERT INTO alertas (id_usuario, tipo, mensaje, fecha_creacion, leida) VALUES
-(1, 'presupuesto', 'Superaste el presupuesto de supermercado', NOW(), FALSE);
-
--- Tabla: notificaciones
-CREATE TABLE notificaciones (
-    id_notificacion SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    mensaje TEXT,
-    fecha_envio TIMESTAMP,
-    leida BOOLEAN
+PRINT 'Creando la tabla ALERTAS...';
+CREATE TABLE ALERTAS (
+    id_alerta INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    tipo NVARCHAR(50) CHECK (tipo IN ('presupuesto', 'objetivo', 'gasto_inusual')),
+    mensaje NVARCHAR(500) NOT NULL,
+    fecha_creacion DATETIME2 DEFAULT GETDATE(),
+    leida BIT DEFAULT 0
 );
 
-INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES
-(2, 'Nuevo objetivo financiero creado', NOW(), FALSE);
-
--- Tabla: reportes
-CREATE TABLE reportes (
-    id_reporte SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    tipo VARCHAR(30),
-    fecha_generacion TIMESTAMP,
-    archivo VARCHAR(255)
+PRINT 'Creando la tabla SESIONES_CHAT...';
+CREATE TABLE SESIONES_CHAT (
+    id_sesion INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    titulo NVARCHAR(100),
+    fecha_inicio DATETIME2 DEFAULT GETDATE(),
+    fecha_ultima_actividad DATETIME2
 );
 
-INSERT INTO reportes (id_usuario, tipo, fecha_generacion, archivo) VALUES
-(1, 'mensual', NOW(), '/reportes/reporte1.pdf');
-
--- Tabla: chats
-CREATE TABLE chats (
-    id_chat SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    fecha TIMESTAMP,
-    mensaje_usuario TEXT,
-    respuesta_ia TEXT
+PRINT 'Creando la tabla CHATS...';
+CREATE TABLE CHATS (
+    id_chat INT PRIMARY KEY IDENTITY(1,1),
+    id_sesion INT NOT NULL, -- FK a SESIONES_CHAT
+    fecha DATETIME2 DEFAULT GETDATE(),
+    mensaje_usuario NVARCHAR(MAX) NOT NULL,
+    respuesta_ia NVARCHAR(MAX)
 );
 
-INSERT INTO chats (id_usuario, fecha, mensaje_usuario, respuesta_ia) VALUES
-(1, NOW(), '¿Cuánto gasté en supermercados?', 'Gastaste $1200 en supermercados este mes.');
-
--- Tabla: logs_actividad
-CREATE TABLE logs_actividad (
-    id_log SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES usuarios(id_usuario),
-    fecha TIMESTAMP,
-    tipo_evento VARCHAR(50),
-    descripcion TEXT
+PRINT 'Creando la tabla REPORTES...';
+CREATE TABLE REPORTES (
+    id_reporte INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    tipo NVARCHAR(50) CHECK (tipo IN ('mensual', 'anual', 'por_categoria')),
+    fecha_generacion DATETIME2 DEFAULT GETDATE(),
+    archivo NVARCHAR(500),
+    parametros NVARCHAR(MAX)
 );
 
-INSERT INTO logs_actividad (id_usuario, fecha, tipo_evento, descripcion) VALUES
-(1, NOW(), 'login', 'Inicio de sesión exitoso');
+PRINT 'Creando la tabla LOGS_ACTIVIDAD...';
+CREATE TABLE LOGS_ACTIVIDAD (
+    id_log INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT, -- FK a USUARIOS (puede ser NULL para eventos del sistema)
+    fecha DATETIME2 DEFAULT GETDATE(),
+    tipo_evento NVARCHAR(100) NOT NULL,
+    descripcion NVARCHAR(1000),
+    metadatos NVARCHAR(MAX)
+);
+
+-- ##############################################
+-- ## FASE 2: CREACIÓN DE RELACIONES (FOREIGN KEYS) ##
+-- ##############################################
+
+PRINT 'Creando relaciones (Foreign Keys)...';
+ALTER TABLE CATEGORIAS ADD CONSTRAINT FK_CATEGORIAS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE ARCHIVOS_IMPORTADOS ADD CONSTRAINT FK_ARCHIVOS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE GASTOS ADD CONSTRAINT FK_GASTOS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE GASTOS ADD CONSTRAINT FK_GASTOS_CATEGORIAS FOREIGN KEY (id_categoria) REFERENCES CATEGORIAS(id_categoria);
+ALTER TABLE GASTOS ADD CONSTRAINT FK_GASTOS_ARCHIVOS FOREIGN KEY (id_archivo_importado) REFERENCES ARCHIVOS_IMPORTADOS(id_archivo_importado);
+ALTER TABLE INTEGRACIONES ADD CONSTRAINT FK_INTEGRACIONES_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE OBJETIVOS_FINANCIEROS ADD CONSTRAINT FK_OBJETIVOS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE PRESUPUESTOS ADD CONSTRAINT FK_PRESUPUESTOS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE PRESUPUESTOS ADD CONSTRAINT FK_PRESUPUESTOS_CATEGORIAS FOREIGN KEY (id_categoria) REFERENCES CATEGORIAS(id_categoria);
+ALTER TABLE ALERTAS ADD CONSTRAINT FK_ALERTAS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE SESIONES_CHAT ADD CONSTRAINT FK_SESIONES_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE CHATS ADD CONSTRAINT FK_CHATS_SESIONES FOREIGN KEY (id_sesion) REFERENCES SESIONES_CHAT(id_sesion);
+ALTER TABLE REPORTES ADD CONSTRAINT FK_REPORTES_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+ALTER TABLE LOGS_ACTIVIDAD ADD CONSTRAINT FK_LOGS_USUARIOS FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+
+PRINT 'Tablas y relaciones creadas exitosamente.';
+
+-- ##############################################
+-- ## FASE 3: INSERCIÓN DE DATOS DE EJEMPLO    ##
+-- ##############################################
+
+PRINT 'Insertando datos de ejemplo...';
+
+-- Primero, creamos un usuario de ejemplo.
+-- El id_usuario será 1.
+INSERT INTO USUARIOS (nombre, email, usuario, contraseña, fecha_creacion, preferencias, ultimo_login, estado)
+VALUES ('Juan Pérez', 'juan.perez@example.com', 'jperez', 'hash_de_contraseña_segura', GETDATE(), '{"tema": "oscuro", "notificaciones": true}', GETDATE(), 'activo');
+DECLARE @id_usuario_juan INT = SCOPE_IDENTITY();
+
+-- Creamos categorías predeterminadas y una personalizada para Juan.
+INSERT INTO CATEGORIAS (nombre, descripcion, es_personalizada, id_usuario, icono, color, activa)
+VALUES
+('Comida', 'Gastos en supermercados y restaurantes', 0, NULL, 'fast-food', '#FFC107', 1),
+('Transporte', 'Gastos en transporte público, combustible, etc.', 0, NULL, 'train', '#03A9F4', 1),
+('Vivienda', 'Alquiler, servicios, expensas', 0, NULL, 'home', '#4CAF50', 1),
+('Entretenimiento', 'Cine, salidas, streaming', 0, NULL, 'game-controller', '#E91E63', 1),
+('Viajes', 'Gastos relacionados a viajes y vacaciones', 1, @id_usuario_juan, 'airplane', '#FF5722', 1);
+
+DECLARE @id_cat_comida INT = (SELECT id_categoria FROM CATEGORIAS WHERE nombre = 'Comida');
+DECLARE @id_cat_transporte INT = (SELECT id_categoria FROM CATEGORIAS WHERE nombre = 'Transporte');
+DECLARE @id_cat_entretenimiento INT = (SELECT id_categoria FROM CATEGORIAS WHERE nombre = 'Entretenimiento');
+
+-- Creamos un archivo importado para Juan.
+INSERT INTO ARCHIVOS_IMPORTADOS (id_usuario, tipo, ruta_archivo, fecha_importacion, estado_procesamiento, resultado_ocr)
+VALUES (@id_usuario_juan, 'pdf', '/uploads/resumen_tarjeta_092025.pdf', GETDATE(), 'procesado', '{"lineas": ["compra COTO...", "pago NETFLIX..."]}');
+DECLARE @id_archivo INT = SCOPE_IDENTITY();
+
+-- Ahora, registramos varios gastos para Juan.
+INSERT INTO GASTOS (id_usuario, id_categoria, fecha, monto, descripcion, comercio, fuente, id_archivo_importado, estado, fecha_creacion, fecha_modificacion, categoria_ia_sugerida, confianza_ia, moneda)
+VALUES
+(@id_usuario_juan, @id_cat_comida, '2025-09-22', 15800.50, 'Compra semanal', 'Supermercado COTO', 'manual', NULL, 'confirmado', GETDATE(), GETDATE(), 'Comida', 0.95, 'ARS'),
+(@id_usuario_juan, @id_cat_transporte, '2025-09-23', 950.00, 'Carga SUBE', 'Kiosco Estación', 'manual', NULL, 'confirmado', GETDATE(), GETDATE(), 'Transporte', 0.99, 'ARS'),
+(@id_usuario_juan, @id_cat_entretenimiento, '2025-09-24', 3500.00, 'Entradas de cine', 'Hoyts Cinema', 'manual', NULL, 'pendiente', GETDATE(), GETDATE(), 'Entretenimiento', 0.88, 'ARS'),
+(@id_usuario_juan, @id_cat_comida, '2025-09-25', 12500.75, 'Cena con amigos', 'Restaurante La Parrilla', 'importado', @id_archivo, 'confirmado', GETDATE(), GETDATE(), 'Comida', 0.92, 'ARS');
+
+-- Creamos un presupuesto mensual de "Comida" para Juan.
+INSERT INTO PRESUPUESTOS (id_usuario, id_categoria, nombre, monto_limite, periodo, fecha_inicio, activo)
+VALUES (@id_usuario_juan, @id_cat_comida, 'Presupuesto mensual de Supermercado', 80000.00, 'mensual', '2025-09-01', 1);
+
+-- Creamos un objetivo financiero para Juan.
+INSERT INTO OBJETIVOS_FINANCIEROS (id_usuario, descripcion, monto, fecha_inicio, fecha_fin, estado)
+VALUES (@id_usuario_juan, 'Ahorrar para vacaciones de verano', 250000.00, '2025-09-01', '2025-12-20', 'en_progreso');
+
+-- Creamos una alerta para Juan.
+INSERT INTO ALERTAS (id_usuario, tipo, mensaje, fecha_creacion, leida)
+VALUES (@id_usuario_juan, 'presupuesto', 'Has superado el 80% de tu presupuesto de Comida para este mes.', GETDATE(), 0);
+
+-- Creamos una sesión de chat y un mensaje para Juan.
+INSERT INTO SESIONES_CHAT (id_usuario, titulo, fecha_inicio, fecha_ultima_actividad)
+VALUES (@id_usuario_juan, 'Gastos de Septiembre', GETDATE(), GETDATE());
+DECLARE @id_sesion INT = SCOPE_IDENTITY();
+
+-- Insertamos un chat en la sesión creada.
+INSERT INTO CHATS (id_sesion, fecha, mensaje_usuario, respuesta_ia)
+VALUES (@id_sesion, GETDATE(), '¿Cuánto gasté en supermercados este mes?', 'Este mes has gastado $28,301.25 en la categoría Comida.');
+
+PRINT 'Datos de ejemplo insertados correctamente.';
+PRINT 'Script finalizado.';

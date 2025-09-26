@@ -30,13 +30,10 @@ La aplicación **Analizador Financiero** utiliza una arquitectura moderna de tre
   - Escalabilidad automática
 
 ### 3. **Base de Datos**
-- **Tecnología:** PostgreSQL
-- **Hosting:** Azure Database for PostgreSQL
+- **Tecnología:** SQL Server
+- **Hosting:** Azure SQL Database (Plan gratuito)
 - **Características:**
   - Base de datos relacional
-  - Backup automático
-  - Alta disponibilidad
-  - Cifrado en tránsito y en reposo
 
 ### 4. **Almacenamiento de Archivos**
 - **Tecnología:** Azure Blob Storage
@@ -53,7 +50,7 @@ La aplicación **Analizador Financiero** utiliza una arquitectura moderna de tre
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │    Frontend     │    │     Backend     │    │   Base de Datos │
-│   React + Vite  │───▶│  Azure App      │───▶│   PostgreSQL    │
+│   React + Vite  │───▶│  Azure App      │───▶│   SQL Server    │
 │                 │    │  Service        │    │                 │
 │ (Vercel/Netlify)│    │  (Docker)       │    │  (Azure DB)     │
 └─────────────────┘    └─────────┬───────┘    └─────────────────┘

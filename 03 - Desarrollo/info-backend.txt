@@ -1,0 +1,49 @@
+app/: Es el directorio principal de tu aplicación FastAPI.
+
+app/main.py: El corazón de tu proyecto. Aquí se crea la instancia de la aplicación FastAPI y se incluyen los routers de la API.
+
+app/api/: Contiene todo lo relacionado con tu API (endpoints).
+
+api_v1/endpoints/: Aquí viven los archivos que definen las rutas. Tendrás un archivo por cada entidad principal de tu DER. Por ejemplo:
+
+usuarios.py: Rutas para /usuarios (crear usuario, obtener usuario, etc.).
+
+gastos.py: Rutas para /gastos (registrar gasto, ver gastos, etc.).
+
+categorias.py, presupuestos.py, etc.
+
+deps.py: Para manejar las "dependencias" de FastAPI, como obtener el usuario actual a partir de un token JWT.
+
+app/db/: Se encarga de la conexión con tu base de datos.
+
+session.py: Configura la conexión a tu base de datos SQL Server.
+
+base.py: Contiene la base declarativa de SQLAlchemy, de la cual heredarán tus modelos de datos.
+
+app/models/: Representa las tablas de tu base de datos como clases de Python (usando SQLAlchemy).
+
+usuario.py: Tendrá la clase Usuario que se mapea a la tabla USUARIOS.
+
+gasto.py: Tendrá la clase Gasto que se mapea a la tabla GASTOS.
+
+...y así sucesivamente para cada tabla de tu DER.
+
+app/schemas/: Define la forma de los datos que tu API recibe y envía (usando Pydantic). Esto es clave en FastAPI.
+
+usuario.py: Tendrá esquemas como UsuarioCrear, UsuarioLeer. UsuarioCrear, por ejemplo, no incluirá el id ni la fecha_creacion, ya que eso lo maneja la base de datos.
+
+gasto.py: Tendrá esquemas como GastoCrear, GastoLeer, GastoActualizar.
+
+app/crud/: Contiene la lógica para interactuar con la base de datos (Crear, Leer, Actualizar, Borrar).
+
+crud_usuario.py: Tendrá funciones como crear_usuario(db, schema), obtener_usuario(db, id). Estas funciones son llamadas desde los endpoints en la carpeta api/.
+
+crud_gasto.py: Funciones para crear, obtener, y filtrar gastos.
+
+app/core/: Para la configuración global de tu aplicación.
+
+config.py: Leerá variables de entorno (como la cadena de conexión a la base de datos) desde el archivo .env.
+
+requirements.txt: La lista de todas las librerías de Python que tu proyecto necesita (FastAPI, Uvicorn, SQLAlchemy, Pydantic, etc.).
+
+.env: Archivo para guardar tus variables de entorno y secretos, como la contraseña de la base de datos.
