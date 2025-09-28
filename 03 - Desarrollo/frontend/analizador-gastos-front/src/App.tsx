@@ -1,46 +1,107 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
-import { AuthProvider } from "./context/AuthContext"
-import ProtectedRoute from "./components/ProtectedRoute"
-import Layout from "./components/layout/Layout"
-import AuthPage from "./pages/AuthPage"
-import Home from "./pages/Home"
-import GastosPage from "./pages/GastosPage"
-import ImportarPage from "./pages/ImportarPage"
-import ChatPage from "./pages/ChatPage"
-import ReportesPage from "./pages/ReportesPage"
-import IntegracionesPage from "./pages/IntegracionesPage"
-import ObjetivosPage from "./pages/ObjetivosPage"
-import ConfiguracionPage from "./pages/ConfiguracionPage"
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { initializeAuth } from './stores/authStore';
+import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/layout/Layout';
 
-function App() {
+// Páginas
+import AuthPage from './pages/AuthPage';
+import Home from './pages/Home';
+import GastosPage from './pages/GastosPage';
+import ObjetivosPage from './pages/ObjetivosPage';
+import ReportesPage from './pages/ReportesPage';
+import ConfiguracionPage from './pages/ConfiguracionPage';
+import ChatPage from './pages/ChatPage';
+import ImportarPage from './pages/ImportarPage';
+import IntegracionesPage from './pages/IntegracionesPage';
+
+// Estilos
+import './App.css';
+
+const App: React.FC = () => {
+  // Inicializar autenticación al cargar la app
+  useEffect(() => {
+    initializeAuth();
+  }, []);
+
   return (
     <Router>
-      <AuthProvider>
+      <div className="App">
         <Routes>
+          {/* Ruta pública - Login/Register */}
           <Route path="/auth" element={<AuthPage />} />
           
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/home" replace />} />
-            <Route path="home" element={<Home />} />
-            <Route path="gastos" element={<GastosPage />} />
-            <Route path="importar" element={<ImportarPage />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="reportes" element={<ReportesPage />} />
-            <Route path="integraciones" element={<IntegracionesPage />} />
-            <Route path="objetivos" element={<ObjetivosPage />} />
-            <Route path="configuracion" element={<ConfiguracionPage />} />
-          </Route>
+          {/* Rutas protegidas */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout>
+                <Home />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/gastos" element={
+            <ProtectedRoute>
+              <Layout>
+                <GastosPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/objetivos" element={
+            <ProtectedRoute>
+              <Layout>
+                <ObjetivosPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/reportes" element={
+            <ProtectedRoute>
+              <Layout>
+                <ReportesPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <Layout>
+                <ChatPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/importar" element={
+            <ProtectedRoute>
+              <Layout>
+                <ImportarPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/integraciones" element={
+            <ProtectedRoute>
+              <Layout>
+                <IntegracionesPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/configuracion" element={
+            <ProtectedRoute>
+              <Layout>
+                <ConfiguracionPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          {/* Ruta de redirección por defecto */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
+      </div>
     </Router>
-  )
-}
+  );
+};
 
-export default App
+export default App;

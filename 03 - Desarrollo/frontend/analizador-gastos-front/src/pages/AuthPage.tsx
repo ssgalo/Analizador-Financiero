@@ -1,145 +1,234 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import React, { useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import type { LoginRequest, RegisterRequest } from '../services/api';
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const { login, register, isAuthenticated } = useAuth();
+const AuthPage: React.FC = () => {
+  const { login, register, isAuthenticated, isLoading } = useAuthStore();
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [formData, setFormData] = useState({
+    email: '',
+    contraseña: '',
+    nombre: '',
+    usuario: ''
+  });
+  const [error, setError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/home", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/';
+
+  // Si ya está autenticado, redirigir
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Limpiar error al escribir
+    if (error) setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    
+    setError('');
+    setIsSubmitting(true);
+
     try {
-      let success;
-      if (isLogin) {
-        success = await login(email, password);
+      if (isLoginMode) {
+        // Login
+        const loginData: LoginRequest = {
+          email: formData.email,
+          contraseña: formData.contraseña
+        };
+        
+        console.log('Intentando login con:', loginData); // Debug
+        await login(loginData);
+        console.log('Login exitoso'); // Debug
       } else {
-        if (!name.trim()) {
-          setError("El nombre es requerido");
-          return;
+        // Registro
+        if (!formData.nombre || !formData.usuario) {
+          throw new Error('Todos los campos son requeridos para el registro');
         }
-        success = await register(name, email, password);
+        
+        const registerData: RegisterRequest = {
+          nombre: formData.nombre,
+          email: formData.email,
+          usuario: formData.usuario,
+          contraseña: formData.contraseña
+        };
+        
+        console.log('Intentando registro con:', registerData); // Debug
+        await register(registerData);
+        console.log('Registro exitoso'); // Debug
       }
-      
-      if (success) {
-        navigate("/home", { replace: true });
-      } else {
-        setError(isLogin ? "Credenciales incorrectas" : "Error al registrar usuario");
-      }
-    } catch (err) {
-      setError("Ocurrió un error. Por favor intenta nuevamente.");
+    } catch (err: any) {
+      console.error('Error en handleSubmit:', err); // Debug
+      setError(err.message || 'Ocurrió un error inesperado');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleGuestAccess = async () => {
-    try {
-      const success = await register("Invitado", "guest@example.com", "guest");
-      if (success) {
-        navigate("/home", { replace: true });
-      } else {
-        setError("Error al acceder como invitado");
-      }
-    } catch (err) {
-      setError("Error al acceder como invitado");
-    }
+  const toggleMode = () => {
+    setIsLoginMode(!isLoginMode);
+    setError('');
+    setFormData({
+      email: '',
+      contraseña: '',
+      nombre: '',
+      usuario: ''
+    });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-8 text-gray-800">
-          {isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
-        </h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta'}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {isLoginMode ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
+            <button
+              type="button"
+              onClick={toggleMode}
+              className="ml-1 font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+            >
+              {isLoginMode ? 'Regístrate aquí' : 'Inicia sesión aquí'}
+            </button>
+          </p>
+        </div>
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            {!isLoginMode && (
+              <>
+                <div>
+                  <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
+                    Nombre completo
+                  </label>
+                  <input
+                    id="nombre"
+                    name="nombre"
+                    type="text"
+                    required={!isLoginMode}
+                    value={formData.nombre}
+                    onChange={handleInputChange}
+                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Tu nombre completo"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="usuario" className="block text-sm font-medium text-gray-700">
+                    Nombre de usuario
+                  </label>
+                  <input
+                    id="usuario"
+                    name="usuario"
+                    type="text"
+                    required={!isLoginMode}
+                    value={formData.usuario}
+                    onChange={handleInputChange}
+                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="usuario123"
+                  />
+                </div>
+              </>
+            )}
+
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Nombre
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
               </label>
               <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                id="email"
+                name="email"
+                type="email"
                 required
+                value={formData.email}
+                onChange={handleInputChange}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="tu@email.com"
               />
             </div>
-          )}
-          
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-              required
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-              required
-            />
+
+            <div>
+              <label htmlFor="contraseña" className="block text-sm font-medium text-gray-700">
+                Contraseña
+              </label>
+              <input
+                id="contraseña"
+                name="contraseña"
+                type="password"
+                required
+                value={formData.contraseña}
+                onChange={handleInputChange}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="••••••••"
+              />
+              {!isLoginMode && (
+                <p className="mt-1 text-xs text-gray-500">
+                  8-32 caracteres, debe incluir mayúsculas, minúsculas, números y símbolos
+                </p>
+              )}
+            </div>
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
+            <div className="rounded-md bg-red-50 p-4 border border-red-200">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <span className="text-red-400">❌</span>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Error
+                  </h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    {error}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
-          <button
-            type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
-          >
-            {isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
-          </button>
-
-          {isLogin && (
+          <div>
             <button
-              type="button"
-              onClick={handleGuestAccess}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+              type="submit"
+              disabled={isSubmitting || isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Continuar como invitado
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isLoginMode ? 'Iniciando sesión...' : 'Creando cuenta...'}
+                </div>
+              ) : (
+                isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta'
+              )}
             </button>
-          )}
+          </div>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-teal-600 hover:text-teal-500"
-          >
-            {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
-          </button>
-        </div>
+        {/* Debug info (remover en producción) */}
+        {import.meta.env.DEV && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+            <p><strong>Debug:</strong></p>
+            <p>isLoading: {isLoading.toString()}</p>
+            <p>isSubmitting: {isSubmitting.toString()}</p>
+            <p>isAuthenticated: {isAuthenticated.toString()}</p>
+            <p>API URL: {import.meta.env.VITE_API_BASE_URL}</p>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default AuthPage;

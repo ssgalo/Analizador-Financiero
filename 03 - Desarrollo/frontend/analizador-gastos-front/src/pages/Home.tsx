@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
@@ -27,12 +28,10 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { useDashboard } from "../hooks/useDashboard"
 import { formatCurrency, formatDisplayDate } from "../utils/formatters"
+import { useAuthStore } from '../stores/authStore';
 
-
-
-
-
-function Home() {
+const Home: React.FC = () => {
+  const { user } = useAuthStore();
   const { 
     usuario, 
     gastos, 
@@ -80,7 +79,7 @@ function Home() {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-2">
-              Bienvenido de vuelta, {usuario?.nombre || 'Usuario'}
+              Bienvenido de vuelta, {usuario?.nombre || user?.nombre || 'Usuario'}
             </h2>
             <p className="text-gray-600">Aquí tienes un resumen de tu situación financiera actual</p>
           </div>
@@ -124,7 +123,7 @@ function Home() {
               <Wallet className="h-4 w-4 text-golden" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-{ahorro >= 0 ? 'teal' : 'coral'}">
+              <div className={`text-2xl font-bold ${ahorro >= 0 ? 'text-teal' : 'text-coral'}`}>
                 ${formatCurrency(Math.abs(ahorro))}
               </div>
               <p className="text-xs text-gray-600">
@@ -397,6 +396,36 @@ function Home() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Información del usuario */}
+        <div className="bg-white rounded-lg shadow p-6 mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Información de la cuenta</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nombre</label>
+              <p className="mt-1 text-sm text-gray-900">{user?.nombre}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Usuario</label>
+              <p className="mt-1 text-sm text-gray-900">@{user?.usuario}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <p className="mt-1 text-sm text-gray-900">{user?.email}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Estado</label>
+              <span className={`
+                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                ${user?.estado === 'activo' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'}
+              `}>
+                {user?.estado === 'activo' ? '✅ Activo' : '❌ Inactivo'}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
