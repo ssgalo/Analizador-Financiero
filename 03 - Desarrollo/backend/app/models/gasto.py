@@ -17,4 +17,4 @@ class Gasto(Base):
     estado = Column(String(20), default="activo")
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_modificacion = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    moneda = Column(String(10), default="ARS")
+    moneda = Column(String(3), ForeignKey("MONEDAS.codigo_moneda"), default="ARS")

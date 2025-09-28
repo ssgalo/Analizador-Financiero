@@ -1,0 +1,175 @@
+# PASOS PARA EJECUTAR EL BACKEND - ANALIZADOR FINANCIERO
+
+## 📋 REQUISITOS PREVIOS
+
+1. Python 3.8+ instalado
+2. pip instalado
+3. ODBC Driver 18 para SQL Server
+4. Conexión a internet (para Azure SQL Database)
+
+---
+
+## 🔧 INSTALACIÓN DE DEPENDENCIAS
+
+### 1. Instalar Python y pip (si no los tienes)
+
+**Ubuntu/Linux:**
+```bash
+sudo apt update
+sudo apt install python3 python3-pip python3-venv
+```
+
+**Windows:**
+- Descargar de python.org/downloads
+- Marcar "Add Python to PATH" durante instalación
+
+### 2. Instalar ODBC Driver 18 para SQL Server
+
+**Ubuntu/Linux:**
+```bash
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+sudo apt-get update
+sudo ACCEPT_EULA=Y apt-get install msodbcsql18 unixodbc-dev
+```
+
+**Windows:**
+- Descargar "Microsoft ODBC Driver 18 for SQL Server" desde Microsoft
+
+---
+
+## 🚀 EJECUCIÓN DEL BACKEND
+
+### 1. Navegar al directorio del backend
+```bash
+cd "03 - Desarrollo/backend"
+```
+
+### 2. Crear entorno virtual (RECOMENDADO)
+```bash
+# Crear entorno virtual
+python3 -m venv venv
+
+# Activar entorno virtual
+source venv/bin/activate      # Linux/Mac
+# venv\Scripts\activate       # Windows
+```
+
+### 3. Instalar dependencias de Python
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Verificar configuración .env
+Asegurate que el archivo .env tenga:
+```
+DB_SERVER=ia-aplicada-db-server.database.windows.net,1433
+DB_NAME=ia-aplicada-db
+DB_USER=unlam
+DB_PASSWORD=ia-aplicada-123
+SECRET_KEY=your-super-secret-key-change-in-production
+```
+
+### 5. Ejecutar el servidor FastAPI
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+---
+
+## ✅ VERIFICAR QUE FUNCIONA
+
+### URLs importantes:
+- Servidor principal: http://localhost:8000
+- Documentación interactiva (Swagger): http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+- Documentación ReDoc: http://localhost:8000/redoc
+
+### Endpoints disponibles:
+- GET /api/v1/usuarios/ - Listar usuarios
+- POST /api/v1/usuarios/ - Crear usuario
+- GET /api/v1/usuarios/{id} - Obtener usuario específico
+- PUT /api/v1/usuarios/{id} - Actualizar usuario
+- DELETE /api/v1/usuarios/{id} - Eliminar usuario
+
+- GET /api/v1/gastos/ - Listar gastos
+- POST /api/v1/gastos/ - Crear gasto
+- GET /api/v1/gastos/{id} - Obtener gasto específico
+- PUT /api/v1/gastos/{id} - Actualizar gasto
+- DELETE /api/v1/gastos/{id} - Eliminar gasto
+
+---
+
+## 🔧 TROUBLESHOOTING
+
+### Error: "Could not locate a bind configured on mapper"
+- Verificar que las tablas existan en Azure SQL Database
+- Ejecutar el script.sql para crear las tablas
+
+### Error: "No module named 'app'"
+- Asegurate de estar en el directorio backend/
+- Verificar que el entorno virtual esté activado
+
+### Error: "Cannot connect to database"
+- Verificar credenciales en .env
+- Verificar firewall en Azure SQL Database
+- Asegurate que ODBC Driver 18 esté instalado
+
+### Error: "Login failed for user 'unlam'"
+- Verificar que el usuario y password sean correctos
+- Verificar que el usuario tenga permisos en la base de datos
+
+---
+
+## 📝 COMANDOS ÚTILES
+
+```bash
+# Ver logs detallados
+uvicorn app.main:app --reload --log-level debug
+
+# Ejecutar en puerto diferente
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+
+# Desactivar entorno virtual
+deactivate
+
+# Activar entorno virtual (después de desactivar)
+source venv/bin/activate      # Linux/Mac
+# venv\Scripts\activate       # Windows
+```
+
+---
+
+## 🗃️ ESTRUCTURA DE ARCHIVOS
+
+```
+backend/
+├── .env                     ← Variables de entorno
+├── requirements.txt         ← Dependencias Python
+├── app/
+│   ├── main.py             ← Punto de entrada de la aplicación
+│   ├── core/config.py      ← Configuración general
+│   ├── crud/session.py     ← Conexión a base de datos
+│   ├── models/             ← Modelos SQLAlchemy (tablas)
+│   ├── schemas/            ← Modelos Pydantic (validación)
+│   └── api/                ← Endpoints de la API
+└── venv/                   ← Entorno virtual (se crea)
+```
+
+---
+
+## 🔐 SEGURIDAD
+
+- Cambiar SECRET_KEY en .env antes de producción
+- No subir .env al repositorio (ya está en .gitignore)
+- Usar HTTPS en producción
+- Configurar firewall correctamente en Azure
+
+---
+
+## 📞 SOPORTE
+
+Si tienes problemas:
+1. Verificar logs en la terminal
+2. Consultar documentación en /docs
+3. Revisar este documento paso a paso

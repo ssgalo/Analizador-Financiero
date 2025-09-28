@@ -32,6 +32,13 @@
 - es_personalizada (bool)
 - id_usuario (FK, nullable para categorías globales)
 
+## moneda
+- **codigo_moneda** (PK)
+- nombre
+- simbolo
+- activa
+- fecha_creacion
+
 ## archivos_importados
 - **id_archivo_importado** (PK)
 - id_usuario (FK)

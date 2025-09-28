@@ -7,16 +7,16 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    # Database
+    # Database - Se leen del .env
     DATABASE_URL: Optional[str] = None
-    DB_SERVER: Optional[str] = None
-    DB_NAME: Optional[str] = None
-    DB_USER: Optional[str] = None
-    DB_PASSWORD: Optional[str] = None
+    DB_SERVER: Optional[str] = os.getenv("DB_SERVER")
+    DB_NAME: Optional[str] = os.getenv("DB_NAME")
+    DB_USER: Optional[str] = os.getenv("DB_USER")
+    DB_PASSWORD: Optional[str] = os.getenv("DB_PASSWORD")
     
-    # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    # Security - Se leen del .env
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "default-secret-key-change-me")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
     class Config:
         env_file = ".env"

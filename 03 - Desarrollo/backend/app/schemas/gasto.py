@@ -4,10 +4,11 @@ from typing import Optional
 from decimal import Decimal
 
 class GastoBase(BaseModel):
+    descripcion: str
+    monto: Decimal
     fecha: date
-    monto: Decimal = Field(..., decimal_places=2)
-    descripcion: Optional[str] = None
     comercio: Optional[str] = None
+    moneda: str = "ARS"
 
 class GastoCreate(GastoBase):
     id_usuario: int
@@ -16,7 +17,7 @@ class GastoCreate(GastoBase):
 
 class GastoUpdate(BaseModel):
     fecha: Optional[date] = None
-    monto: Optional[Decimal] = Field(None, decimal_places=2)
+    monto: Optional[Decimal] = None
     descripcion: Optional[str] = None
     comercio: Optional[str] = None
     id_categoria: Optional[int] = None

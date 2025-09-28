@@ -2,23 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.api.deps import get_database
+from app.api.deps import get_db
 from app.models.usuario import Usuario
-from app.schemas.usuario import UsuarioResponse, UsuarioCreate, UsuarioUpdate
+from app.schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 
 router = APIRouter()
 
 @router.post("/", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 def create_usuario(
     usuario_in: UsuarioCreate,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
     # Verificar si el usuario ya existe
     db_usuario = db.query(Usuario).filter(Usuario.usuario == usuario_in.usuario).first()
     if db_usuario:
         raise HTTPException(
             status_code=400,
-            detail="El usuario ya existe"
+            detail="El usuario ya está registrado"
         )
     
     # Verificar si el email ya existe
@@ -26,9 +26,10 @@ def create_usuario(
     if db_email:
         raise HTTPException(
             status_code=400,
-            detail="El email ya existe"
+            detail="El email ya está registrado"
         )
     
+    # Crear el usuario
     db_usuario = Usuario(**usuario_in.dict())
     db.add(db_usuario)
     db.commit()
@@ -39,26 +40,26 @@ def create_usuario(
 def read_usuarios(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
-    usuarios = db.query(Usuario).offset(skip).limit(limit).all()
+    usuarios = db.query(Usuario).order_by(Usuario.id_usuario).offset(skip).limit(limit).all()
     return usuarios
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 def read_usuario(
     usuario_id: int,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
-    db_usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
-    if db_usuario is None:
+    usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
+    if usuario is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return db_usuario
+    return usuario
 
 @router.put("/{usuario_id}", response_model=UsuarioResponse)
 def update_usuario(
     usuario_id: int,
     usuario_in: UsuarioUpdate,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
     db_usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
     if db_usuario is None:
@@ -68,19 +69,20 @@ def update_usuario(
     for field, value in update_data.items():
         setattr(db_usuario, field, value)
     
+    db.add(db_usuario)
     db.commit()
     db.refresh(db_usuario)
     return db_usuario
 
-@router.delete("/{usuario_id}")
+@router.delete("/{usuario_id}", response_model=UsuarioResponse)
 def delete_usuario(
     usuario_id: int,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
-    db_usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
-    if db_usuario is None:
+    usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
+    if usuario is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
-    db.delete(db_usuario)
+    db.delete(usuario)
     db.commit()
-    return {"message": "Usuario eliminado correctamente"}
+    return usuario

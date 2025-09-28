@@ -225,3 +225,38 @@ VALUES (@id_sesion, GETDATE(), '¿Cuánto gasté en supermercados este mes?', 'E
 
 PRINT 'Datos de ejemplo insertados correctamente.';
 PRINT 'Script finalizado.';
+
+-- NUEVO
+
+PRINT 'Creando la tabla MONEDAS...';
+CREATE TABLE MONEDAS (
+    codigo_moneda NVARCHAR(3) PRIMARY KEY, -- ISO 4217: ARS, USD, EUR
+    nombre NVARCHAR(50) NOT NULL,          -- Peso Argentino, Dólar Estadounidense
+    simbolo NVARCHAR(5) NOT NULL,          -- $, US$, €
+    activa BIT DEFAULT 1,
+    fecha_creacion DATETIME2 DEFAULT GETDATE()
+);
+
+-- Insertar monedas principales
+INSERT INTO MONEDAS (codigo_moneda, nombre, simbolo, activa) VALUES
+('ARS', 'Peso Argentino', '$', 1),
+('USD', 'Dólar Estadounidense', 'US$', 1),
+('EUR', 'Euro', '€', 1),
+('BRL', 'Real Brasileño', 'R$', 1),
+('CLP', 'Peso Chileno', 'CLP$', 1);
+
+-- Cambiar las columnas moneda por Foreign Keys
+ALTER TABLE GASTOS 
+ALTER COLUMN moneda NVARCHAR(3);
+
+ALTER TABLE PRESUPUESTOS 
+ADD moneda NVARCHAR(3) DEFAULT 'ARS';
+
+-- Agregar las Foreign Keys
+ALTER TABLE GASTOS 
+ADD CONSTRAINT FK_GASTOS_MONEDAS 
+FOREIGN KEY (moneda) REFERENCES MONEDAS(codigo_moneda);
+
+ALTER TABLE PRESUPUESTOS 
+ADD CONSTRAINT FK_PRESUPUESTOS_MONEDAS 
+FOREIGN KEY (moneda) REFERENCES MONEDAS(codigo_moneda);
