@@ -3,7 +3,8 @@ from .gasto import GastoCreate, GastoUpdate, GastoResponse
 from .categoria import CategoriaCreate, CategoriaUpdate, CategoriaResponse
 from .objetivo_financiero import ObjetivoFinancieroCreate, ObjetivoFinancieroUpdate, ObjetivoFinancieroResponse
 from .presupuesto import PresupuestoCreate, PresupuestoUpdate, PresupuestoResponse, PresupuestoConProgreso
-from .moneda import MonedaCreate, MonedaUpdate, MonedaResponse
+from .moneda import MonedaCreate, MonedaResponse
+from .auth import UserLogin, UserRegister, Token, TokenData, UserInToken
 
 __all__ = [
     "UsuarioCreate", "UsuarioUpdate", "UsuarioResponse",
@@ -11,5 +12,6 @@ __all__ = [
     "CategoriaCreate", "CategoriaUpdate", "CategoriaResponse",
     "ObjetivoFinancieroCreate", "ObjetivoFinancieroUpdate", "ObjetivoFinancieroResponse",
     "PresupuestoCreate", "PresupuestoUpdate", "PresupuestoResponse", "PresupuestoConProgreso",
-    "MonedaCreate", "MonedaUpdate", "MonedaResponse"
+    "MonedaCreate", "MonedaResponse",
+    "UserLogin", "UserRegister", "Token", "TokenData", "UserInToken"
 ]

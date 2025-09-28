@@ -1,8 +1,12 @@
 from fastapi import APIRouter
-from app.api.api_v1.endpoints import usuarios, gastos, categorias, objetivos_financieros, presupuestos, monedas
+from app.api.api_v1.endpoints import usuarios, gastos, categorias, objetivos_financieros, presupuestos, monedas, auth
 
 api_router = APIRouter()
 
+# Rutas públicas (sin autenticación)
+api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
+
+# Rutas protegidas (requieren JWT)
 api_router.include_router(usuarios.router, prefix="/usuarios", tags=["usuarios"])
 api_router.include_router(gastos.router, prefix="/gastos", tags=["gastos"])
 api_router.include_router(categorias.router, prefix="/categorias", tags=["categorias"])

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.models.usuario import Usuario
 from app.schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 
@@ -40,7 +40,8 @@ def create_usuario(
 def read_usuarios(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     usuarios = db.query(Usuario).order_by(Usuario.id_usuario).offset(skip).limit(limit).all()
     return usuarios
@@ -48,7 +49,8 @@ def read_usuarios(
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 def read_usuario(
     usuario_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
     if usuario is None:
@@ -59,7 +61,8 @@ def read_usuario(
 def update_usuario(
     usuario_id: int,
     usuario_in: UsuarioUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     db_usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
     if db_usuario is None:
@@ -77,7 +80,8 @@ def update_usuario(
 @router.delete("/{usuario_id}", response_model=UsuarioResponse)
 def delete_usuario(
     usuario_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     usuario = db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
     if usuario is None:

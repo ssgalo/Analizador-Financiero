@@ -2,8 +2,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.models.categoria import Categoria
+from app.models.usuario import Usuario
 from app.schemas.categoria import CategoriaCreate, CategoriaUpdate, CategoriaResponse
 
 router = APIRouter()
@@ -13,7 +14,8 @@ router = APIRouter()
 def create_categoria(
     *,
     db: Session = Depends(get_db),
-    categoria_in: CategoriaCreate
+    categoria_in: CategoriaCreate,
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> CategoriaResponse:
     """
     Crear una nueva categoría.
@@ -43,7 +45,8 @@ def read_categorias(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     id_usuario: Optional[int] = Query(None),
-    activa: Optional[bool] = Query(None)
+    activa: Optional[bool] = Query(None),
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> List[CategoriaResponse]:
     """
     Obtener lista de categorías con filtros opcionales.
@@ -68,7 +71,8 @@ def read_categorias(
 @router.get("/{categoria_id}", response_model=CategoriaResponse)
 def read_categoria(
     categoria_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> CategoriaResponse:
     """
     Obtener una categoría específica por ID.
@@ -84,7 +88,8 @@ def update_categoria(
     *,
     db: Session = Depends(get_db),
     categoria_id: int,
-    categoria_in: CategoriaUpdate
+    categoria_in: CategoriaUpdate,
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> CategoriaResponse:
     """
     Actualizar una categoría existente.
@@ -120,7 +125,8 @@ def update_categoria(
 @router.delete("/{categoria_id}", response_model=CategoriaResponse)
 def delete_categoria(
     categoria_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> CategoriaResponse:
     """
     Eliminar una categoría.
@@ -140,7 +146,8 @@ def read_categorias_usuario(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    solo_activas: bool = Query(True)
+    solo_activas: bool = Query(True),
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> List[CategoriaResponse]:
     """
     Obtener todas las categorías disponibles para un usuario específico.

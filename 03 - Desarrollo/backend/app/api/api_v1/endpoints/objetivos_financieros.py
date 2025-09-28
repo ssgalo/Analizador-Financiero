@@ -3,8 +3,9 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.models.objetivo_financiero import ObjetivoFinanciero
+from app.models.usuario import Usuario
 from app.schemas.objetivo_financiero import ObjetivoFinancieroCreate, ObjetivoFinancieroUpdate, ObjetivoFinancieroResponse
 
 router = APIRouter()
@@ -14,7 +15,8 @@ router = APIRouter()
 def create_objetivo_financiero(
     *,
     db: Session = Depends(get_db),
-    objetivo_in: ObjetivoFinancieroCreate
+    objetivo_in: ObjetivoFinancieroCreate,
+    current_user: Usuario = Depends(get_current_active_user)
 ) -> ObjetivoFinancieroResponse:
     """
     Crear un nuevo objetivo financiero.

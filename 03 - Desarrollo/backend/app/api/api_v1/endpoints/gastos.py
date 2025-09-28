@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.models.gasto import Gasto
 from app.models.moneda import Moneda
+from app.models.usuario import Usuario
 from app.schemas.gasto import GastoCreate, GastoUpdate, GastoResponse
 
 router = APIRouter()
@@ -12,7 +13,8 @@ router = APIRouter()
 @router.post("/", response_model=GastoResponse, status_code=status.HTTP_201_CREATED)
 def create_gasto(
     gasto_in: GastoCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     """
     Crear un nuevo gasto.
@@ -41,7 +43,8 @@ def read_gastos(
     usuario_id: Optional[int] = None,
     categoria_id: Optional[int] = None,
     moneda: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     query = db.query(Gasto)
     
@@ -58,7 +61,8 @@ def read_gastos(
 @router.get("/{gasto_id}", response_model=GastoResponse)
 def read_gasto(
     gasto_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     db_gasto = db.query(Gasto).filter(Gasto.id_gasto == gasto_id).first()
     if db_gasto is None:
@@ -70,7 +74,8 @@ def update_gasto(
     *,
     gasto_id: int,
     gasto_in: GastoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     db_gasto = db.query(Gasto).filter(Gasto.id_gasto == gasto_id).first()
     if db_gasto is None:
@@ -88,7 +93,8 @@ def update_gasto(
 @router.delete("/{gasto_id}", response_model=GastoResponse)
 def delete_gasto(
     gasto_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     db_gasto = db.query(Gasto).filter(Gasto.id_gasto == gasto_id).first()
     if db_gasto is None:
