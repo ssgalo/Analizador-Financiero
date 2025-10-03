@@ -33,6 +33,44 @@ jobs:
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: 03 - Desarrollo/backend
 
+      - name: Configure App Settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {
+                "name": "DB_SERVER",
+                "value": "${{ secrets.DB_SERVER }}",
+                "slotSetting": false
+              },
+              {
+                "name": "DB_NAME",
+                "value": "${{ secrets.DB_NAME }}",
+                "slotSetting": false
+              },
+              {
+                "name": "DB_USER",
+                "value": "${{ secrets.DB_USER }}",
+                "slotSetting": false
+              },
+              {
+                "name": "DB_PASSWORD",
+                "value": "${{ secrets.DB_PASSWORD }}",
+                "slotSetting": false
+              },
+              {
+                "name": "SECRET_KEY",
+                "value": "${{ secrets.SECRET_KEY }}",
+                "slotSetting": false
+              },
+              {
+                "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                "value": "true",
+                "slotSetting": false
+              }
+            ]
+
       - name: Notify success
         if: success()
         run: echo "Backend deployed to Azure App Service!"
