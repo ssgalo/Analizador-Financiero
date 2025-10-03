@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    # Database
+    # Database.
     DATABASE_URL: Optional[str] = None
     DB_SERVER: Optional[str] = os.getenv("DB_SERVER")
     DB_NAME: Optional[str] = os.getenv("DB_NAME")
