@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     DB_USER: Optional[str] = os.getenv("DB_USER")
     DB_PASSWORD: Optional[str] = os.getenv("DB_PASSWORD")
     
-    # JWT Security
+    # JWT Security.
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-super-secret-jwt-key-change-in-production-min-32-chars-1234567890")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
     ALGORITHM: str = "HS256"
