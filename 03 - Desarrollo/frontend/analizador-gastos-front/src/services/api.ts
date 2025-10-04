@@ -40,8 +40,9 @@ apiClient.interceptors.response.use(
       localStorage.removeItem(import.meta.env.VITE_TOKEN_KEY || 'auth_token');
       localStorage.removeItem(import.meta.env.VITE_USER_KEY || 'user_info');
       
-      // Redirigir al login (esto se manejará en el contexto)
-      window.location.href = '/auth';
+      // NO usar window.location.href ya que causa refresco de página
+      // La navegación se manejará en el store de autenticación
+      console.log('🔒 Token expirado, el store manejará la navegación');
     }
     return Promise.reject(error);
   }

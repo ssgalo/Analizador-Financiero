@@ -19,10 +19,11 @@ import IntegracionesPage from './pages/IntegracionesPage';
 import './App.css';
 
 const App: React.FC = () => {
-  // Inicializar autenticación al cargar la app
+  // Inicializar autenticación al cargar la app (solo una vez)
   useEffect(() => {
+    console.log('🚀 Inicializando aplicación...'); // Debug
     initializeAuth();
-  }, []);
+  }, []); // Sin dependencias para que solo se ejecute una vez
 
   return (
     <Router>

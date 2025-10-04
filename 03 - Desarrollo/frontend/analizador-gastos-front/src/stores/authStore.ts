@@ -30,14 +30,18 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         
         try {
+          console.log('🔐 Iniciando login...'); // Debug
           const authResponse: AuthResponse = await authService.login(credentials);
           
+          console.log('✅ Login exitoso, actualizando estado...'); // Debug
           // Actualizar estado
           set({
             user: authResponse.user_info,
             isAuthenticated: true,
             isLoading: false
           });
+          
+          console.log('🚀 Estado actualizado correctamente'); // Debug
           
         } catch (error: any) {
           set({ isLoading: false });
@@ -115,14 +119,31 @@ export const useAuthStore = create<AuthState>()(
 
       // Acción: Refrescar usuario
       refreshUser: async () => {
+        const currentState = get();
+        
+        // Si ya se está cargando, no hacer nada
+        if (currentState.isLoading) {
+          return;
+        }
+        
         try {
           if (authService.isAuthenticated()) {
-            const currentUser = await authService.getCurrentUser();
-            set({
-              user: currentUser,
-              isAuthenticated: true,
-              isLoading: false
-            });
+            // Solo actualizar si no hay usuario o si el usuario cambió
+            if (!currentState.user) {
+              console.log('🔄 Refrescando datos de usuario...'); // Debug
+              const currentUser = await authService.getCurrentUser();
+              set({
+                user: currentUser,
+                isAuthenticated: true,
+                isLoading: false
+              });
+            } else {
+              // Usuario ya existe, solo asegurar que esté marcado como autenticado
+              set({
+                isAuthenticated: true,
+                isLoading: false
+              });
+            }
           } else {
             set({
               user: null,
