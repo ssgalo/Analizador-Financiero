@@ -29,7 +29,9 @@ def create_gasto(
             status_code=400,
             detail=f"Moneda '{gasto_in.moneda}' no válida o inactiva"
         )
-    
+    # Agrego para que inserte siempre por el usuario logueado
+    gasto_data = gasto_in.dict()
+    gasto_data["id_usuario"] = current_user.id_usuario
     db_gasto = Gasto(**gasto_in.dict())
     db.add(db_gasto)
     db.commit()
@@ -46,7 +48,8 @@ def read_gastos(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    query = db.query(Gasto)
+    #Agrego para que filtre por el usuario logueado
+    query = db.query(Gasto).filter(Gasto.id_usuario == current_user.id_usuario)
     
     if usuario_id:
         query = query.filter(Gasto.id_usuario == usuario_id)
@@ -64,7 +67,10 @@ def read_gasto(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    db_gasto = db.query(Gasto).filter(Gasto.id_gasto == gasto_id).first()
+    db_gasto = db.query(Gasto).filter(
+        Gasto.id_gasto == gasto_id,
+        Gasto.id_usuario == current_user.id_usuario
+    ).first()
     if db_gasto is None:
         raise HTTPException(status_code=404, detail="Gasto no encontrado")
     return db_gasto
@@ -77,7 +83,10 @@ def update_gasto(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    db_gasto = db.query(Gasto).filter(Gasto.id_gasto == gasto_id).first()
+    db_gasto = db.query(Gasto).filter(
+        Gasto.id_gasto == gasto_id,
+        Gasto.id_usuario == current_user.id_usuario
+        ).first()
     if db_gasto is None:
         raise HTTPException(status_code=404, detail="Gasto no encontrado")
     
@@ -96,10 +105,14 @@ def delete_gasto(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    db_gasto = db.query(Gasto).filter(Gasto.id_gasto == gasto_id).first()
+    db_gasto = db.query(Gasto).filter(
+        Gasto.id_gasto == gasto_id,
+        Gasto.id_usuario == current_user.id_usuario).first()
     if db_gasto is None:
         raise HTTPException(status_code=404, detail="Gasto no encontrado")
     
     db.delete(db_gasto)
     db.commit()
     return db_gasto
+
+#agrego restriccion a todos los endpoints de gastos para que siempre trabajen con el usuario logueado
