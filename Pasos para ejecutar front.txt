@@ -1,0 +1,11 @@
+# El backend debe estar corriendo.
+# 0. Abrir una nueva terminal
+
+# 1. Moverse a Analizador-gastos-front
+cd "03 - Desarrollo\frontend\analizador-gastos-front"
+
+# 2. Revisar si npm esta instalado
+npm i
+
+# 3. Ejecutar el front
+npm run dev
