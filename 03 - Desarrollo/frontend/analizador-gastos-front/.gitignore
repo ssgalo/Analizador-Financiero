@@ -24,3 +24,9 @@ dist-ssr
 *.sw?
 
 .env
+
+# Ignorar .env del backend
+03 - Desarrollo/backend/.env
+
+# Ignorar .env del frontend
+03 - Desarrollo/frontend/analizador-gastos-front/.env
