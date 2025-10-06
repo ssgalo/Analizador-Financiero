@@ -11,7 +11,6 @@ class GastoBase(BaseModel):
     moneda: str = "ARS"
 
 class GastoCreate(GastoBase):
-    id_usuario: int
     id_categoria: Optional[int] = None
     fuente: str = "manual"
 
@@ -30,8 +29,15 @@ class GastoResponse(GastoBase):
     fuente: str
     estado: str
     fecha_creacion: datetime
-    fecha_modificacion: datetime
+    fecha_modificacion: Optional[datetime] = None  # ✅ Permite None temporalmente
     moneda: str = "ARS"
     
     class Config:
         from_attributes = True
+
+# Schema para estadísticas
+class GastoStats(BaseModel):
+    total_gastos: Decimal
+    cantidad_gastos: int
+    promedio_gasto: Decimal
+    gastos_por_categoria: dict

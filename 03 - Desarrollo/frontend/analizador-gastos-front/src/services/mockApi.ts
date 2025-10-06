@@ -32,7 +32,7 @@ export interface Gasto {
   categoria?: Categoria;
   fuente: 'manual' | 'PDF' | 'imagen' | 'MercadoPago' | 'banco';
   id_archivo_importado?: number;
-  estado: 'activo' | 'eliminado' | 'pendiente';
+  estado: 'confirmado' | 'eliminado' | 'pendiente';  // ✅ Actualizado según CHECK constraint de la BD
   fecha_creacion: string;
   fecha_modificacion: string;
 }
@@ -89,7 +89,7 @@ const mockGastos: Gasto[] = [
     comercio: "Supermercado Disco",
     id_categoria: 1,
     fuente: "manual",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-19T10:30:00Z",
     fecha_modificacion: "2025-09-19T10:30:00Z"
   },
@@ -102,7 +102,7 @@ const mockGastos: Gasto[] = [
     comercio: "Uber",
     id_categoria: 2,
     fuente: "MercadoPago",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-19T14:15:00Z",
     fecha_modificacion: "2025-09-19T14:15:00Z"
   },
@@ -115,7 +115,7 @@ const mockGastos: Gasto[] = [
     comercio: "Netflix",
     id_categoria: 4,
     fuente: "PDF",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-18T20:00:00Z",
     fecha_modificacion: "2025-09-18T20:00:00Z"
   },
@@ -128,7 +128,7 @@ const mockGastos: Gasto[] = [
     comercio: "La Parolaccia",
     id_categoria: 1,
     fuente: "manual",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-18T21:30:00Z",
     fecha_modificacion: "2025-09-18T21:30:00Z"
   },
@@ -141,7 +141,7 @@ const mockGastos: Gasto[] = [
     comercio: "Shell",
     id_categoria: 2,
     fuente: "imagen",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-17T09:00:00Z",
     fecha_modificacion: "2025-09-17T09:00:00Z"
   },
@@ -154,7 +154,7 @@ const mockGastos: Gasto[] = [
     comercio: "Inmobiliaria Central",
     id_categoria: 3,
     fuente: "manual",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-16T10:00:00Z",
     fecha_modificacion: "2025-09-16T10:00:00Z"
   },
@@ -167,7 +167,7 @@ const mockGastos: Gasto[] = [
     comercio: "Zara",
     id_categoria: 5,
     fuente: "MercadoPago",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-15T16:45:00Z",
     fecha_modificacion: "2025-09-15T16:45:00Z"
   },
@@ -180,7 +180,7 @@ const mockGastos: Gasto[] = [
     comercio: "Farmacity",
     id_categoria: 6,
     fuente: "manual",
-    estado: "activo",
+    estado: "confirmado",
     fecha_creacion: "2025-09-14T11:20:00Z",
     fecha_modificacion: "2025-09-14T11:20:00Z"
   }
@@ -263,8 +263,8 @@ export const mockApi = {
   }): Promise<Gasto[]> {
     await delay(500);
     
-    // Filtrar solo gastos activos (no eliminados)
-    let gastosFiltrados = mockGastos.filter(gasto => gasto.estado === 'activo');
+    // Filtrar solo gastos confirmados (no eliminados ni pendientes)
+    let gastosFiltrados = mockGastos.filter(gasto => gasto.estado === 'confirmado');
     
     // Agregar información de categoría a cada gasto
     gastosFiltrados = gastosFiltrados.map(gasto => ({

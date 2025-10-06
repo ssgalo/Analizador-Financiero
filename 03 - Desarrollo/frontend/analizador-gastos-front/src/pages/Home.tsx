@@ -99,7 +99,11 @@ const Home: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold">${formatCurrency(totalGastos)}</div>
               <p className="text-xs text-gray-600">
-                <span className="text-coral">+12%</span> vs mes anterior
+                {totalGastos > 0 ? (
+                  <span className="text-coral">Mes actual</span>
+                ) : (
+                  <span className="text-gray-500">Sin gastos registrados</span>
+                )}
               </p>
             </CardContent>
           </Card>
@@ -112,7 +116,11 @@ const Home: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold">${formatCurrency(totalIngresos)}</div>
               <p className="text-xs text-gray-600">
-                <span className="text-teal">Estable</span> vs mes anterior
+                {totalIngresos > 0 ? (
+                  <span className="text-teal">Mes actual</span>
+                ) : (
+                  <span className="text-gray-500">Sin ingresos registrados</span>
+                )}
               </p>
             </CardContent>
           </Card>
@@ -188,52 +196,62 @@ const Home: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {estadisticas?.gastosPorCategoria.map((category, index) => {
-                  const percentage = totalGastos > 0 ? (category.total / totalGastos) * 100 : 0;
-                  // Mapeo simple de iconos basado en el nombre de la categoría
-                  let IconComponent = ShoppingCart; // icono por defecto
-                  switch (category.categoria.toLowerCase()) {
-                    case 'alimentación':
-                      IconComponent = Coffee;
-                      break;
-                    case 'transporte':
-                      IconComponent = Car;
-                      break;
-                    case 'vivienda':
-                      IconComponent = HomeIcon;
-                      break;
-                    case 'entretenimiento':
-                      IconComponent = Smartphone;
-                      break;
-                    case 'salud':
-                      IconComponent = Heart;
-                      break;
-                    case 'educación':
-                      IconComponent = Book;
-                      break;
-                    case 'servicios':
-                      IconComponent = Wifi;
-                      break;
-                  }
-                  
-                  return (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: category.color + "20" }}
-                        >
-                          <IconComponent className="w-4 h-4" style={{ color: category.color }} />
+                {estadisticas?.gastosPorCategoria && estadisticas.gastosPorCategoria.length > 0 ? (
+                  estadisticas.gastosPorCategoria.map((category, index) => {
+                    const percentage = totalGastos > 0 ? (category.total / totalGastos) * 100 : 0;
+                    // Mapeo simple de iconos basado en el nombre de la categoría
+                    let IconComponent = ShoppingCart; // icono por defecto
+                    switch (category.categoria.toLowerCase()) {
+                      case 'alimentación':
+                      case 'alimentacion':
+                        IconComponent = Coffee;
+                        break;
+                      case 'transporte':
+                        IconComponent = Car;
+                        break;
+                      case 'vivienda':
+                        IconComponent = HomeIcon;
+                        break;
+                      case 'entretenimiento':
+                        IconComponent = Smartphone;
+                        break;
+                      case 'salud':
+                        IconComponent = Heart;
+                        break;
+                      case 'educación':
+                      case 'educacion':
+                        IconComponent = Book;
+                        break;
+                      case 'servicios':
+                        IconComponent = Wifi;
+                        break;
+                    }
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: category.color + "20" }}
+                          >
+                            <IconComponent className="w-4 h-4" style={{ color: category.color }} />
+                          </div>
+                          <span className="font-medium">{category.categoria}</span>
                         </div>
-                        <span className="font-medium">{category.categoria}</span>
+                        <div className="text-right">
+                          <div className="font-semibold">${formatCurrency(category.total)}</div>
+                          <div className="text-sm text-gray-600">{percentage.toFixed(1).replace('.', ',')}%</div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">${formatCurrency(category.total)}</div>
-                        <div className="text-sm text-gray-600">{percentage.toFixed(1).replace('.', ',')}%</div>
-                      </div>
-                    </div>
-                  )
-                }) || []}
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <PieChart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm">Sin datos de categorías</p>
+                    <p className="text-xs mt-1">Los gastos por categoría aparecerán aquí</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -305,31 +323,39 @@ const Home: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {gastos.slice(0, 4).map((gasto) => {
-                  return (
-                    <div
-                      key={gasto.id_gasto}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coral/20">
-                          <TrendingDown className="w-5 h-5 text-coral" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{gasto.comercio}</div>
-                          <div className="text-sm text-gray-600 flex items-center space-x-2">
-                            <span>{gasto.categoria?.nombre || 'Sin categoría'}</span>
-                            <span>•</span>
-                            <span>{formatDisplayDate(gasto.fecha)}</span>
+                {gastos.length > 0 ? (
+                  gastos.slice(0, 4).map((gasto) => {
+                    return (
+                      <div
+                        key={gasto.id_gasto}
+                        className="flex items-center justify-between p-3 rounded-lg border border-border"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coral/20">
+                            <TrendingDown className="w-5 h-5 text-coral" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{gasto.comercio}</div>
+                            <div className="text-sm text-gray-600 flex items-center space-x-2">
+                              <span>{gasto.categoria?.nombre || 'Sin categoría'}</span>
+                              <span>•</span>
+                              <span>{formatDisplayDate(gasto.fecha)}</span>
+                            </div>
                           </div>
                         </div>
+                        <div className="font-semibold text-coral">
+                          -${formatCurrency(gasto.monto)}
+                        </div>
                       </div>
-                      <div className="font-semibold text-coral">
-                        -${formatCurrency(gasto.monto)}
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm">No hay transacciones recientes</p>
+                    <p className="text-xs mt-1">Los gastos aparecerán aquí cuando los registres</p>
+                  </div>
+                )}
               </div>
               <Link to="/gastos">
                 <Button variant="outline" className="w-full mt-4 bg-transparent hover:bg-slate-100 hover:border-slate-300">

@@ -5,7 +5,8 @@ import { Input } from "../ui/input"
 import { Select } from "../ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Save, X, Loader2, DollarSign, FileText, Tag, Building } from "lucide-react"
-import type { Gasto, Categoria } from "../../services/mockApi"
+import type { Gasto, Categoria, GastoCreate, GastoUpdate } from "../../services/api"
+import { useAuthStore } from "../../stores/authStore"
 import { formatDateToLocal, formatDateToISO, getCurrentDateISO, formatNumber, parseLocalNumber } from "../../utils/formatters"
 import { DateInput } from "../ui/date-input"
 import { useColors } from "../../hooks/useColors"
@@ -13,8 +14,8 @@ import { useColors } from "../../hooks/useColors"
 interface FormularioGastoProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (gasto: Omit<Gasto, 'id_gasto' | 'fecha_creacion' | 'fecha_modificacion'>) => Promise<void>
-  onUpdate?: (id: number, gasto: Partial<Gasto>) => Promise<void>
+  onSubmit: (gasto: GastoCreate) => Promise<void>
+  onUpdate?: (id: number, gasto: GastoUpdate) => Promise<void>
   categorias: Categoria[]
   gastoEditar?: Gasto | null
   isLoading?: boolean
@@ -46,6 +47,8 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
   isLoading = false
 }) => {
   const { colors, getHoverStyles } = useColors()
+  // ✅ Obtener usuario desde Zustand
+  const { user } = useAuthStore();
   
   const [formData, setFormData] = useState<FormData>({
     fecha: formatDateToLocal(getCurrentDateISO()),
@@ -162,21 +165,36 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
     setIsSubmitting(true)
 
     try {
-      const gastoData = {
-        id_usuario: 1, // Por ahora hardcodeado
-        fecha: formatDateToISO(formData.fecha), // Convertir de dd/mm/yyyy a yyyy-mm-dd
-        monto: parseLocalNumber(formData.monto), // Convertir de formato local a número
-        descripcion: formData.descripcion.trim(),
-        comercio: formData.comercio.trim(),
-        id_categoria: parseInt(formData.id_categoria),
-        fuente: 'manual' as const,
-        estado: 'activo' as const
+      // ✅ Obtener el usuario desde Zustand
+      if (!user || !user.id_usuario) {
+        throw new Error('Usuario no autenticado');
       }
 
+      console.log('💾 Guardando gasto para usuario:', user.nombre, '- ID:', user.id_usuario);
+
       if (gastoEditar && onUpdate) {
-        await onUpdate(gastoEditar.id_gasto, gastoData)
+        // Actualizar gasto existente
+        const gastoUpdate: GastoUpdate = {
+          fecha: formatDateToISO(formData.fecha),
+          monto: parseLocalNumber(formData.monto),
+          descripcion: formData.descripcion.trim(),
+          comercio: formData.comercio.trim(),
+          id_categoria: parseInt(formData.id_categoria),
+          fuente: 'manual'
+        };
+        await onUpdate(gastoEditar.id_gasto, gastoUpdate);
       } else {
-        await onSubmit(gastoData)
+        // Crear nuevo gasto
+        const nuevoGasto: GastoCreate = {
+          id_usuario: user.id_usuario,
+          fecha: formatDateToISO(formData.fecha),
+          monto: parseLocalNumber(formData.monto),
+          descripcion: formData.descripcion.trim(),
+          comercio: formData.comercio.trim(),
+          id_categoria: parseInt(formData.id_categoria),
+          fuente: 'manual'
+        };
+        await onSubmit(nuevoGasto);
       }
 
       onClose()
