@@ -14,7 +14,21 @@ class Gasto(Base):
     id_categoria = Column(Integer, ForeignKey("CATEGORIAS.id_categoria"))
     fuente = Column(String(30), default="manual")
     id_archivo_importado = Column(Integer)
-    estado = Column(String(20), default="activo")
-    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
-    fecha_modificacion = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    estado = Column(String(20), default="confirmado") 
+    
+    # Fechas con default en Python para compatibilidad con FastAPI
+    fecha_creacion = Column(
+        DateTime(timezone=True), 
+        default=func.now(),
+        server_default=func.now(),
+        nullable=False
+    )
+    fecha_modificacion = Column(
+        DateTime(timezone=True), 
+        default=func.now(),           # ✅ Default en Python
+        server_default=func.now(),    # ✅ Default en SQL Server
+        onupdate=func.now(),          # ✅ Se actualiza en UPDATE
+        nullable=False
+    )
+    
     moneda = Column(String(3), ForeignKey("MONEDAS.codigo_moneda"), default="ARS")

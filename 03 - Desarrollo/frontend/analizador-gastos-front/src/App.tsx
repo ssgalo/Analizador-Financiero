@@ -3,11 +3,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { initializeAuth } from './stores/authStore';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import SessionExpiredNotification from './components/auth/SessionExpiredNotification';
 
 // Páginas
 import AuthPage from './pages/AuthPage';
 import Home from './pages/Home';
 import GastosPage from './pages/GastosPage';
+import IngresosPage from './pages/IngresosPage';
 import ObjetivosPage from './pages/ObjetivosPage';
 import ReportesPage from './pages/ReportesPage';
 import ConfiguracionPage from './pages/ConfiguracionPage';
@@ -45,6 +47,14 @@ const App: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <GastosPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/ingresos" element={
+            <ProtectedRoute>
+              <Layout>
+                <IngresosPage />
               </Layout>
             </ProtectedRoute>
           } />
@@ -100,6 +110,9 @@ const App: React.FC = () => {
           {/* Ruta de redirección por defecto */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        
+        {/* Notificación global de sesión expirada */}
+        <SessionExpiredNotification />
       </div>
     </Router>
   );

@@ -8,13 +8,19 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  tokenExpiry: number | null;
+  sessionExpired: boolean;
   
   // Acciones
   login: (credentials: LoginRequest) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
-  logout: () => void;
+  logout: (showMessage?: boolean) => void;
+  forceLogout: () => void;
   refreshUser: () => Promise<void>;
   setLoading: (loading: boolean) => void;
+  checkTokenExpiry: () => boolean;
+  clearSessionExpired: () => void;
+  setupTokenExpiryWarning: (expiresInSeconds: number) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,24 +30,34 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: true,
+      tokenExpiry: null,
+      sessionExpired: false,
 
       // Acción: Login
       login: async (credentials: LoginRequest) => {
-        set({ isLoading: true });
+        set({ isLoading: true, sessionExpired: false });
         
         try {
           console.log('🔐 Iniciando login...'); // Debug
           const authResponse: AuthResponse = await authService.login(credentials);
+          
+          // Calcular tiempo de expiración del token (en milisegundos)
+          const expiryTime = Date.now() + (authResponse.expires_in * 1000);
           
           console.log('✅ Login exitoso, actualizando estado...'); // Debug
           // Actualizar estado
           set({
             user: authResponse.user_info,
             isAuthenticated: true,
-            isLoading: false
+            isLoading: false,
+            tokenExpiry: expiryTime,
+            sessionExpired: false
           });
           
           console.log('🚀 Estado actualizado correctamente'); // Debug
+          
+          // Configurar timer para advertir sobre expiración
+          get().setupTokenExpiryWarning(authResponse.expires_in);
           
         } catch (error: any) {
           set({ isLoading: false });
@@ -64,6 +80,29 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Error al iniciar sesión. Intenta nuevamente.');
           }
         }
+      },
+
+      // Configurar advertencia de expiración de token
+      setupTokenExpiryWarning: (expiresInSeconds: number) => {
+        // Advertir 5 minutos antes de que expire el token
+        const warningTime = Math.max(0, (expiresInSeconds - 300) * 1000);
+        
+        setTimeout(() => {
+          const state = get();
+          if (state.isAuthenticated && !state.sessionExpired) {
+            console.warn('⚠️ Token expirará pronto');
+            // Aquí podrías mostrar una notificación al usuario
+          }
+        }, warningTime);
+        
+        // Logout automático cuando expire el token
+        setTimeout(() => {
+          const state = get();
+          if (state.isAuthenticated) {
+            console.warn('🔒 Token expirado, cerrando sesión automáticamente');
+            state.forceLogout();
+          }
+        }, expiresInSeconds * 1000);
       },
 
       // Acción: Registro
@@ -107,14 +146,63 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Acción: Logout
-      logout: () => {
+      // Acción: Logout normal
+      logout: (showMessage: boolean = true) => {
+        console.log('👋 Cerrando sesión...');
+        
         authService.logout();
         set({
           user: null,
           isAuthenticated: false,
-          isLoading: false
+          isLoading: false,
+          tokenExpiry: null,
+          sessionExpired: false
         });
+        
+        if (showMessage) {
+          // Mostrar mensaje de logout exitoso
+          setTimeout(() => {
+            console.log('✅ Sesión cerrada correctamente');
+          }, 100);
+        }
+      },
+
+      // Acción: Logout forzado (por expiración de token)
+      forceLogout: () => {
+        console.log('🔒 Sesión expirada, cerrando automáticamente...');
+        
+        authService.logout();
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          tokenExpiry: null,
+          sessionExpired: true
+        });
+      },
+
+      // Verificar si el token ha expirado
+      checkTokenExpiry: (): boolean => {
+        const { tokenExpiry, isAuthenticated } = get();
+        
+        if (!isAuthenticated || !tokenExpiry) {
+          return false;
+        }
+        
+        const isExpired = Date.now() >= tokenExpiry;
+        
+        if (isExpired) {
+          console.log('🔒 Token expirado detectado');
+          get().forceLogout();
+          return true;
+        }
+        
+        return false;
+      },
+
+      // Limpiar flag de sesión expirada
+      clearSessionExpired: () => {
+        set({ sessionExpired: false });
       },
 
       // Acción: Refrescar usuario
@@ -127,6 +215,11 @@ export const useAuthStore = create<AuthState>()(
         }
         
         try {
+          // Verificar si el token ha expirado antes de hacer la request
+          if (currentState.checkTokenExpiry()) {
+            return;
+          }
+          
           if (authService.isAuthenticated()) {
             // Solo actualizar si no hay usuario o si el usuario cambió
             if (!currentState.user) {
@@ -148,12 +241,20 @@ export const useAuthStore = create<AuthState>()(
             set({
               user: null,
               isAuthenticated: false,
-              isLoading: false
+              isLoading: false,
+              tokenExpiry: null,
+              sessionExpired: false
             });
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error al refrescar usuario:', error);
-          get().logout();
+          
+          // Si es error 401, significa que el token expiró
+          if (error.response?.status === 401) {
+            get().forceLogout();
+          } else {
+            get().logout(false);
+          }
         }
       },
 
@@ -166,8 +267,9 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-store', // Nombre para localStorage
       partialize: (state) => ({ 
         user: state.user,
-        isAuthenticated: state.isAuthenticated 
-      }), // Solo persistir user e isAuthenticated, no isLoading
+        isAuthenticated: state.isAuthenticated,
+        tokenExpiry: state.tokenExpiry
+      }), // Persistir user, isAuthenticated y tokenExpiry
     }
   )
 );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
+import { gastosService, ingresosService } from '../services/api';
 
 // Tipos para el dashboard
 interface Usuario {
@@ -81,8 +82,15 @@ export const useDashboard = (): UseDashboardReturn => {
       setIsLoading(true);
       setError(null);
 
-      // Simular datos hasta conectar con el backend
-      const mockUsuario: Usuario = {
+      // Obtener fecha actual para filtros del mes
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const firstDay = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+
+      // Datos del usuario (ya los tenemos del store)
+      const usuarioData: Usuario = {
         id_usuario: user.id_usuario,
         nombre: user.nombre,
         email: user.email,
@@ -90,57 +98,84 @@ export const useDashboard = (): UseDashboardReturn => {
         estado: user.estado
       };
 
-      const mockGastos: Gasto[] = [
-        {
-          id_gasto: 1,
-          comercio: 'Supermercado Carrefour',
-          monto: 12500.50,
-          fecha: '2024-03-15',
-          categoria: { id_categoria: 1, nombre: 'Alimentación', color: '#22C55E' }
-        },
-        {
-          id_gasto: 2,
-          comercio: 'Estación YPF',
-          monto: 8000.00,
-          fecha: '2024-03-14',
-          categoria: { id_categoria: 2, nombre: 'Transporte', color: '#3B82F6' }
-        },
-        {
-          id_gasto: 3,
-          comercio: 'Farmacia San Pablo',
-          monto: 3200.75,
-          fecha: '2024-03-13',
-          categoria: { id_categoria: 3, nombre: 'Salud', color: '#EF4444' }
-        },
-        {
-          id_gasto: 4,
-          comercio: 'Netflix',
-          monto: 2500.00,
-          fecha: '2024-03-12',
-          categoria: { id_categoria: 4, nombre: 'Entretenimiento', color: '#8B5CF6' }
-        }
-      ];
+      // Obtener gastos y estadísticas del mes actual
+      const [gastosResponse, gastosStatsResponse, ingresosStatsResponse] = await Promise.all([
+        // Gastos recientes (últimos 5 para mostrar en transacciones)
+        gastosService.getGastos({ 
+          limit: 5, 
+          fecha_desde: firstDay, 
+          fecha_hasta: lastDay 
+        }),
+        // Estadísticas de gastos del mes actual
+        gastosService.getEstadisticas(year, month),
+        // Estadísticas de ingresos del mes actual
+        ingresosService.getEstadisticas(year, month)
+      ]);
 
-      const mockEstadisticas: Estadisticas = {
-        totalGastos: 45000.00,
-        totalIngresos: 120000.00,
-        gastosPorCategoria: [
-          { categoria: 'Alimentación', total: 18000.00, color: '#22C55E' },
-          { categoria: 'Transporte', total: 12000.00, color: '#3B82F6' },
-          { categoria: 'Salud', total: 5000.00, color: '#EF4444' },
-          { categoria: 'Entretenimiento', total: 4000.00, color: '#8B5CF6' },
-          { categoria: 'Vivienda', total: 6000.00, color: '#F59E0B' }
-        ],
-        tendenciaMensual: [
-          { mes: 'Oct', ingresos: 110000, gastos: 42000 },
-          { mes: 'Nov', ingresos: 115000, gastos: 44000 },
-          { mes: 'Dic', ingresos: 118000, gastos: 47000 },
-          { mes: 'Ene', ingresos: 120000, gastos: 43000 },
-          { mes: 'Feb', ingresos: 119000, gastos: 45000 },
-          { mes: 'Mar', ingresos: 120000, gastos: 45000 }
-        ]
+      // Procesar gastos recientes
+      const gastosRecientes: Gasto[] = gastosResponse.map((gasto: any) => ({
+        id_gasto: gasto.id_gasto,
+        comercio: gasto.comercio || gasto.descripcion || 'Sin descripción',
+        monto: parseFloat(gasto.monto),
+        fecha: gasto.fecha,
+        categoria: gasto.categoria ? {
+          id_categoria: gasto.categoria.id_categoria,
+          nombre: gasto.categoria.nombre,
+          color: gasto.categoria.color || '#6B7280'
+        } : undefined
+      }));
+
+      // Procesar estadísticas de gastos
+      const totalGastos = parseFloat(gastosStatsResponse.total_gastos?.toString() || '0');
+      const gastosPorCategoria: GastoPorCategoria[] = Object.entries(gastosStatsResponse.gastos_por_categoria || {})
+        .map(([categoria, data]: [string, any]) => ({
+          categoria,
+          total: parseFloat(data.total?.toString() || '0'),
+          color: data.color || '#6B7280'
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      // Procesar estadísticas de ingresos
+      const totalIngresos = parseFloat(ingresosStatsResponse.total_ingresos?.toString() || '0');
+
+      // Generar tendencia mensual (últimos 6 meses)
+      const tendenciaMensual: TendenciaMensual[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const fecha = new Date(year, month - 1 - i, 1);
+        const mesAño = fecha.getFullYear();
+        const mesNum = fecha.getMonth() + 1;
+        const mesNombre = fecha.toLocaleDateString('es-ES', { month: 'short' });
+        
+        try {
+          const [gastosStats, ingresosStats] = await Promise.all([
+            gastosService.getEstadisticas(mesAño, mesNum),
+            ingresosService.getEstadisticas(mesAño, mesNum)
+          ]);
+          
+          tendenciaMensual.push({
+            mes: mesNombre,
+            gastos: parseFloat(gastosStats.total_gastos?.toString() || '0'),
+            ingresos: parseFloat(ingresosStats.total_ingresos?.toString() || '0')
+          });
+        } catch (error) {
+          // Si no hay datos para un mes, agregar con 0
+          tendenciaMensual.push({
+            mes: mesNombre,
+            gastos: 0,
+            ingresos: 0
+          });
+        }
+      }
+
+      // Crear objeto de estadísticas
+      const estadisticasData: Estadisticas = {
+        totalGastos,
+        totalIngresos,
+        gastosPorCategoria,
+        tendenciaMensual
       };
 
+      // Recomendaciones mock (mantenerlas como estaban por ahora)
       const mockRecomendaciones: Recomendacion[] = [
         {
           id: 1,
@@ -168,17 +203,31 @@ export const useDashboard = (): UseDashboardReturn => {
         }
       ];
 
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setUsuario(mockUsuario);
-      setGastos(mockGastos);
-      setEstadisticas(mockEstadisticas);
+      setUsuario(usuarioData);
+      setGastos(gastosRecientes);
+      setEstadisticas(estadisticasData);
       setRecomendaciones(mockRecomendaciones);
 
     } catch (err: any) {
       console.error('Error al cargar datos del dashboard:', err);
       setError(err.message || 'Error al cargar los datos');
+      
+      // En caso de error, mantener datos mock básicos para que la UI no se rompa
+      setUsuario({
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        email: user.email,
+        usuario: user.usuario,
+        estado: user.estado
+      });
+      setGastos([]);
+      setEstadisticas({
+        totalGastos: 0,
+        totalIngresos: 0,
+        gastosPorCategoria: [],
+        tendenciaMensual: []
+      });
+      setRecomendaciones([]);
     } finally {
       setIsLoading(false);
     }

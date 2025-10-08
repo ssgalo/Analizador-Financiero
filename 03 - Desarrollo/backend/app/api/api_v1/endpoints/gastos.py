@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, extract
 from typing import List, Optional
+from decimal import Decimal
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.gasto import Gasto
 from app.models.moneda import Moneda
+from app.models.categoria import Categoria
 from app.models.usuario import Usuario
-from app.schemas.gasto import GastoCreate, GastoUpdate, GastoResponse
+from app.schemas.gasto import GastoCreate, GastoUpdate, GastoResponse, GastoStats
 
 router = APIRouter()
 
@@ -29,13 +32,16 @@ def create_gasto(
             status_code=400,
             detail=f"Moneda '{gasto_in.moneda}' no válida o inactiva"
         )
-    # Agrego para que inserte siempre por el usuario logueado
+    
+    # ✅ Crear gasto con el usuario logueado
     gasto_data = gasto_in.dict()
     gasto_data["id_usuario"] = current_user.id_usuario
-    db_gasto = Gasto(**gasto_in.dict())
+    
+    db_gasto = Gasto(**gasto_data)
     db.add(db_gasto)
     db.commit()
-    db.refresh(db_gasto)
+    db.refresh(db_gasto)  # ✅ Refresca para obtener valores generados por la BD
+    
     return db_gasto
 
 @router.get("/", response_model=List[GastoResponse])
@@ -60,6 +66,72 @@ def read_gastos(
     
     gastos = query.order_by(Gasto.id_gasto.desc()).offset(skip).limit(limit).all()
     return gastos
+
+@router.get("/stats", response_model=GastoStats)
+def get_gasto_stats(
+    año: Optional[int] = Query(None, description="Año para estadísticas"),
+    mes: Optional[int] = Query(None, ge=1, le=12, description="Mes para estadísticas"),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    """
+    Obtener estadísticas de gastos del usuario.
+    """
+    query = db.query(Gasto).filter(
+        Gasto.id_usuario == current_user.id_usuario,
+        Gasto.estado == "confirmado"
+    )
+    
+    # Filtrar por año y mes si se proporcionan
+    if año:
+        query = query.filter(extract('year', Gasto.fecha) == año)
+    if mes:
+        query = query.filter(extract('month', Gasto.fecha) == mes)
+    
+    gastos = query.all()
+    
+    if not gastos:
+        return GastoStats(
+            total_gastos=Decimal('0'),
+            cantidad_gastos=0,
+            promedio_gasto=Decimal('0'),
+            gastos_por_categoria={}
+        )
+    
+    # Calcular estadísticas
+    total = sum(gasto.monto for gasto in gastos)
+    cantidad = len(gastos)
+    promedio = total / cantidad if cantidad > 0 else Decimal('0')
+    
+    # Agrupar por categoría
+    por_categoria = {}
+    # Obtener categorías de los gastos
+    categorias_ids = [gasto.id_categoria for gasto in gastos if gasto.id_categoria]
+    categorias = {}
+    if categorias_ids:
+        categorias_query = db.query(Categoria).filter(Categoria.id_categoria.in_(categorias_ids)).all()
+        categorias = {cat.id_categoria: cat for cat in categorias_query}
+    
+    for gasto in gastos:
+        if gasto.id_categoria and gasto.id_categoria in categorias:
+            cat_nombre = categorias[gasto.id_categoria].nombre
+            if cat_nombre not in por_categoria:
+                por_categoria[cat_nombre] = {'total': Decimal('0'), 'cantidad': 0}
+            por_categoria[cat_nombre]['total'] += gasto.monto
+            por_categoria[cat_nombre]['cantidad'] += 1
+        else:
+            # Gastos sin categoría
+            if 'Sin categoría' not in por_categoria:
+                por_categoria['Sin categoría'] = {'total': Decimal('0'), 'cantidad': 0}
+            por_categoria['Sin categoría']['total'] += gasto.monto
+            por_categoria['Sin categoría']['cantidad'] += 1
+    
+    return GastoStats(
+        total_gastos=total,
+        cantidad_gastos=cantidad,
+        promedio_gasto=promedio,
+        gastos_por_categoria=por_categoria
+    )
 
 @router.get("/{gasto_id}", response_model=GastoResponse)
 def read_gasto(

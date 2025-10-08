@@ -260,3 +260,87 @@ FOREIGN KEY (moneda) REFERENCES MONEDAS(codigo_moneda);
 ALTER TABLE PRESUPUESTOS 
 ADD CONSTRAINT FK_PRESUPUESTOS_MONEDAS 
 FOREIGN KEY (moneda) REFERENCES MONEDAS(codigo_moneda);
+
+-- ##############################################
+-- ## CREACIÓN DE TABLA INGRESOS               ##
+-- ##############################################
+
+PRINT 'Creando la tabla INGRESOS...';
+CREATE TABLE INGRESOS (
+    id_ingreso INT PRIMARY KEY IDENTITY(1,1),
+    id_usuario INT NOT NULL, -- FK a USUARIOS
+    id_categoria INT, -- FK a CATEGORIAS (puede ser NULL para ingresos sin categoría)
+    fecha DATE NOT NULL,
+    monto DECIMAL(18, 2) NOT NULL,
+    descripcion NVARCHAR(255),
+    fuente NVARCHAR(100), -- Sueldo, Freelance, Inversiones, Venta, etc.
+    tipo NVARCHAR(30) CHECK (tipo IN ('salario', 'freelance', 'inversion', 'venta', 'regalo', 'otro')),
+    recurrente BIT DEFAULT 0, -- Si es un ingreso recurrente (ej: sueldo)
+    frecuencia NVARCHAR(20) CHECK (frecuencia IN ('semanal', 'quincenal', 'mensual', 'trimestral', 'anual', 'unica')),
+    estado NVARCHAR(20) CHECK (estado IN ('confirmado', 'pendiente', 'cancelado')) DEFAULT 'confirmado',
+    fecha_creacion DATETIME2 DEFAULT GETDATE(),
+    fecha_modificacion DATETIME2 DEFAULT GETDATE(),
+    moneda NVARCHAR(3) DEFAULT 'ARS',
+    notas NVARCHAR(500) -- Campo adicional para observaciones
+);
+
+-- Agregar Foreign Keys
+ALTER TABLE INGRESOS 
+ADD CONSTRAINT FK_INGRESOS_USUARIOS 
+FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario);
+
+ALTER TABLE INGRESOS 
+ADD CONSTRAINT FK_INGRESOS_CATEGORIAS 
+FOREIGN KEY (id_categoria) REFERENCES CATEGORIAS(id_categoria);
+
+ALTER TABLE INGRESOS 
+ADD CONSTRAINT FK_INGRESOS_MONEDAS 
+FOREIGN KEY (moneda) REFERENCES MONEDAS(codigo_moneda);
+
+PRINT 'Tabla INGRESOS creada exitosamente.';
+
+-- ##############################################
+-- ## CATEGORÍAS ESPECÍFICAS PARA INGRESOS     ##
+-- ##############################################
+
+-- Insertar categorías predefinidas para ingresos
+INSERT INTO CATEGORIAS (nombre, descripcion, es_personalizada, id_usuario, icono, color, activa)
+VALUES
+('Salario', 'Ingresos por trabajo en relación de dependencia', 0, NULL, 'briefcase', '#4CAF50', 1),
+('Freelance', 'Ingresos por trabajos independientes', 0, NULL, 'laptop', '#2196F3', 1),
+('Inversiones', 'Dividendos, intereses, ganancias de capital', 0, NULL, 'trending-up', '#FF9800', 1),
+('Ventas', 'Ingresos por venta de productos o servicios', 0, NULL, 'shopping-bag', '#9C27B0', 1),
+('Regalos/Bonos', 'Regalos monetarios, bonificaciones, premios', 0, NULL, 'gift', '#E91E63', 1),
+('Otros Ingresos', 'Ingresos varios no categorizados', 0, NULL, 'plus-circle', '#607D8B', 1);
+
+-- ##############################################
+-- ## DATOS DE EJEMPLO PARA INGRESOS           ##
+-- ##############################################
+
+-- Obtener el ID de Juan (usuario de ejemplo)
+DECLARE @id_usuario_juan INT = (SELECT id_usuario FROM USUARIOS WHERE email = 'juan.perez@example.com');
+DECLARE @id_cat_salario INT = (SELECT id_categoria FROM CATEGORIAS WHERE nombre = 'Salario');
+DECLARE @id_cat_freelance INT = (SELECT id_categoria FROM CATEGORIAS WHERE nombre = 'Freelance');
+
+-- Insertar ingresos de ejemplo para Juan
+INSERT INTO INGRESOS (id_usuario, id_categoria, fecha, monto, descripcion, fuente, tipo, recurrente, frecuencia, estado, moneda, notas)
+VALUES
+(@id_usuario_juan, @id_cat_salario, '2025-09-01', 850000.00, 'Sueldo Septiembre 2025', 'Empresa ABC SA', 'salario', 1, 'mensual', 'confirmado', 'ARS', 'Sueldo neto depositado'),
+(@id_usuario_juan, @id_cat_freelance, '2025-09-15', 125000.00, 'Proyecto web para cliente', 'Cliente XYZ', 'freelance', 0, 'unica', 'confirmado', 'ARS', 'Desarrollo de sitio web'),
+(@id_usuario_juan, @id_cat_salario, '2025-09-30', 45000.00, 'Presentismo Septiembre', 'Empresa ABC SA', 'salario', 1, 'mensual', 'confirmado', 'ARS', 'Bono por asistencia perfecta'),
+(@id_usuario_juan, @id_cat_freelance, '2025-10-05', 200000.00, 'Consultoría IT', 'Startup DEF', 'freelance', 0, 'unica', 'pendiente', 'ARS', 'Pendiente de confirmación de pago');
+
+PRINT 'Datos de ejemplo de INGRESOS insertados correctamente.';
+
+-- ##############################################
+-- ## ÍNDICES PARA OPTIMIZACIÓN                ##
+-- ##############################################
+
+-- Crear índices para mejorar el rendimiento de consultas frecuentes
+CREATE INDEX IX_INGRESOS_USUARIO_FECHA ON INGRESOS (id_usuario, fecha DESC);
+CREATE INDEX IX_INGRESOS_TIPO_ESTADO ON INGRESOS (tipo, estado);
+CREATE INDEX IX_INGRESOS_FECHA_MONTO ON INGRESOS (fecha, monto DESC);
+
+PRINT 'Índices de INGRESOS creados exitosamente.';
+PRINT 'Tabla INGRESOS completamente configurada.';
+
