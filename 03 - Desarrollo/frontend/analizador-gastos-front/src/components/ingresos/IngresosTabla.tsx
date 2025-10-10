@@ -7,14 +7,12 @@ interface IngresosTablaProps {
   ingresos: Ingreso[];
   loading: boolean;
   onIngresoEliminado: () => void;
-  onIngresoActualizado: () => void;
 }
 
 const IngresosTabla: React.FC<IngresosTablaProps> = ({ 
   ingresos, 
   loading, 
-  onIngresoEliminado, 
-  onIngresoActualizado 
+  onIngresoEliminado
 }) => {
   const [ingresoAEliminar, setIngresoAEliminar] = useState<Ingreso | null>(null);
   const [menuAbierto, setMenuAbierto] = useState<number | null>(null);

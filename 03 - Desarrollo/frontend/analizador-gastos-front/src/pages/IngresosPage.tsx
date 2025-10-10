@@ -68,9 +68,9 @@ const IngresosPage: React.FC = () => {
     cargarDatos();
   };
 
-  const handleIngresoActualizado = () => {
+  /*const handleIngresoActualizado = () => {
     cargarDatos();
-  };
+  };*/
 
   const handleFiltrosChange = (nuevosFiltros: any) => {
     setFiltrosActivos(nuevosFiltros);
@@ -193,7 +193,6 @@ const IngresosPage: React.FC = () => {
           ingresos={ingresos}
           loading={loading}
           onIngresoEliminado={handleIngresoEliminado}
-          onIngresoActualizado={handleIngresoActualizado}
         />
 
         {/* Modal para crear/editar ingreso */}
