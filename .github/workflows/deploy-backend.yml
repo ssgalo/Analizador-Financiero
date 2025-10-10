@@ -15,11 +15,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Prepare deployment package
+        run: |
+          mkdir deploy_package
+          rsync -av --progress "03 - Desarrollo/backend/" deploy_package/
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+          package: './deploy_package'
 
       - name: Notify success
         if: success()
