@@ -223,7 +223,7 @@ const AuthPage: React.FC = () => {
             <p>isLoading: {isLoading.toString()}</p>
             <p>isSubmitting: {isSubmitting.toString()}</p>
             <p>isAuthenticated: {isAuthenticated.toString()}</p>
-            <p>API URL: {import.meta.env.VITE_API_BASE_URL}</p>
+            <p>API URL: {import.meta.env.VITE_API_URL}</p>
           </div>
         )}
       </div>

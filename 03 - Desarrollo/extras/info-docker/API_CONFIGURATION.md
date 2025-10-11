@@ -13,7 +13,7 @@ El frontend utiliza variables de entorno que se configuran en **tiempo de BUILD*
 
 ```env
 # .env.production
-VITE_API_BASE_URL=/api
+VITE_API_URL=/api
 VITE_API_VERSION=v1
 VITE_TOKEN_KEY=auth_token
 VITE_USER_KEY=user_info
@@ -42,7 +42,7 @@ graph LR
 1. **Nginx principal** (puerto 80) recibe todas las peticiones
 2. Rutas que empiezan con `/api/` se envían al backend
 3. Otras rutas se envían al frontend (SPA)
-4. El frontend usa `VITE_API_BASE_URL=/api` (relativo)
+4. El frontend usa `VITE_API_URL=/api` (relativo)
 
 ## 🔧 Configuración de Nginx
 
@@ -81,7 +81,7 @@ location / {
 El archivo `src/services/api.ts` ya está configurado correctamente:
 
 ```typescript
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
 
 export const apiClient = axios.create({
@@ -172,7 +172,7 @@ Backend: https://api.tudominio.com
 
 Cambiar `.env.production`:
 ```env
-VITE_API_BASE_URL=https://api.tudominio.com
+VITE_API_URL=https://api.tudominio.com
 ```
 
 ### Escenario 3: Backend en otro servidor
@@ -183,7 +183,7 @@ Backend: https://backend-server.com
 
 Cambiar `.env.production`:
 ```env
-VITE_API_BASE_URL=https://backend-server.com
+VITE_API_URL=https://backend-server.com
 ```
 
 Y configurar CORS en el backend.
