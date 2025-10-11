@@ -1,0 +1,1 @@
+﻿def obtener_contexto_gastos(user_id: int, db: Session) -> str:
