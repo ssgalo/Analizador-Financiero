@@ -285,7 +285,7 @@ docker-compose up -d frontend
 
 ## 📝 Notas Importantes
 
-- El frontend usa **VITE_API_BASE_URL=/api** en producción (relativo)
+- El frontend usa **VITE_API_URL=/api** en producción (relativo)
 - El backend usa **psycopg2-binary** para PostgreSQL
 - Los datos persisten en el volume **postgres_data**
 - El puerto 80 se expone para HTTP (443 para HTTPS si configuras SSL)

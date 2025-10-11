@@ -37,15 +37,18 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Crear script para inyectar variables de entorno en runtime
-RUN echo '#!/bin/sh' > /docker-entrypoint.d/40-generate-env.sh && \
-    echo 'cat <<EOF > /usr/share/nginx/html/env-config.js' >> /docker-entrypoint.d/40-generate-env.sh && \
-    echo 'window._env_ = {' >> /docker-entrypoint.d/40-generate-env.sh && \
-    echo '  VITE_API_URL: "'${VITE_API_URL}'",' >> /docker-entrypoint.d/40-generate-env.sh && \
-    echo '  VITE_APP_NAME: "'${VITE_APP_NAME}'",' >> /docker-entrypoint.d/40-generate-env.sh && \
-    echo '  VITE_ENV: "'${VITE_ENV}'"' >> /docker-entrypoint.d/40-generate-env.sh && \
-    echo '};' >> /docker-entrypoint.d/40-generate-env.sh && \
-    echo 'EOF' >> /docker-entrypoint.d/40-generate-env.sh && \
-    chmod +x /docker-entrypoint.d/40-generate-env.sh
+RUN cat > /docker-entrypoint.d/40-generate-env.sh <<'EOF'
+#!/bin/sh
+cat > /usr/share/nginx/html/env-config.js <<ENVEOF
+window._env_ = {
+  VITE_API_URL: "${VITE_API_URL}",
+  VITE_APP_NAME: "${VITE_APP_NAME}",
+  VITE_ENV: "${VITE_ENV}"
+};
+ENVEOF
+EOF
+
+RUN chmod +x /docker-entrypoint.d/40-generate-env.sh
 
 # Exponer puerto 80
 EXPOSE 80
