@@ -183,7 +183,12 @@ export const useGastos = (): UseGastosReturn => {
     }
   }, [cargarDatos]);
 
-  const totalGastos = gastos.reduce((total, gasto) => total + gasto.monto, 0);
+  const totalGastos = gastos.reduce((total, gasto) => {
+    const monto = typeof gasto.monto === 'number' 
+      ? gasto.monto 
+      : parseFloat(String(gasto.monto)) || 0;
+    return total + monto;
+  }, 0);
 
   return {
     gastos,

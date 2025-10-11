@@ -3,7 +3,7 @@ from sqlalchemy.sql import func
 from app.crud.base import Base
 
 class Moneda(Base):
-    __tablename__ = "MONEDAS"
+    __tablename__ = "monedas"
     
     codigo_moneda = Column(String(3), primary_key=True, index=True)  # ARS, USD, EUR
     nombre = Column(String(50), nullable=False)                      # Peso Argentino

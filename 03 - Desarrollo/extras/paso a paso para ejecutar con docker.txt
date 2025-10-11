@@ -1,0 +1,193 @@
+Pasos para Windows:
+
+Paso 1: Instalar Docker Desktop
+
+# Descarga Docker Desktop desde:
+# https://www.docker.com/products/docker-desktop/
+
+# O usa winget (si tienes Windows 10/11):
+winget install Docker.DockerDesktop
+
+Paso 2: Habilitar WSL 2
+# Abre PowerShell como Administrador y ejecuta:
+wsl --install
+
+# Reinicia tu PC si es necesario
+
+# Verifica la versión:
+wsl --list --verbose
+
+Paso 3: Configurar Docker Desktop
+Abre Docker Desktop
+Ve a Settings → General
+Asegúrate que esté marcado "Use the WSL 2 based engine"
+Aplica y reinicia Docker Desktop
+
+Paso 4: Verificar instalación
+# En PowerShell o CMD:
+docker --version
+docker-compose --version
+
+# Deberías ver algo como:
+# Docker version 24.x.x
+# Docker Compose version v2.x.x
+
+Paso 5:
+Ir a la carpeta '03 - Desarrollo'
+
+Paso 6:
+Crear Archivo de Variables de Entorno con las variables correctas
+.env 
+
+Paso 7: Construir las imagenes de docker (Se hace solo la primera vez, o cuando haga cambios en el código, sino ejecutar directo el siguiente paso)
+docker-compose build
+
+Paso 8: Levantar los contenedores
+docker-compose up -d
+
+Paso 9: Verificar que Todo Esté Corriendo
+docker-compose ps
+
+Salida esperada:
+NAME                                  STATUS    PORTS
+analizador-financiero-backend-1       Up        0.0.0.0:8000->8000/tcp
+analizador-financiero-db-1            Up        0.0.0.0:5432->5432/tcp
+analizador-financiero-frontend-1      Up        80/tcp
+analizador-financiero-nginx-1         Up        0.0.0.0:80->80/tcp
+
+Paso 10: Acceder a la aplicación
+Servicio	URL	Descripción
+Frontend	http://localhost	Aplicación React
+Backend API	http://localhost/api/v1	API REST
+Docs Swagger	http://localhost/docs	Documentación interactiva
+ReDoc	http://localhost/redoc	Documentación alternativa
+PostgreSQL	localhost:5432	Base de datos (conexión directa)
+
+
+Para linux:
+Paso 1: Actualizar el sistema
+sudo apt update
+sudo apt upgrade -y
+
+Paso 2: Instalar docker
+# Eliminar versiones antiguas si existen
+sudo apt remove docker docker-engine docker.io containerd runc
+
+# Instalar dependencias
+sudo apt install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+# Agregar la clave GPG oficial de Docker
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Configurar el repositorio
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Instalar Docker Engine
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+Paso 3: Configurar Docker sin sudo
+sudo usermod -aG docker $USER
+
+# Aplicar cambios (requiere cerrar sesión y volver a entrar, o ejecutar):
+newgrp docker
+
+# Verificar que funciona sin sudo
+docker run hello-world
+
+Paso 4: Habilitar Docker al Inicio
+sudo systemctl enable docker
+sudo systemctl start docker
+
+Paso 5: Verificar Instalación
+docker --version
+docker compose version
+
+Paso 6: cd ~/Analizador-Financiero/03\ -\ Desarrollo
+
+CREAR ARCHIVO .env
+
+Paso 7: 
+docker compose build
+
+Paso 8: 
+docker compose up -d
+
+Paso 9: 
+Servicio	URL	Descripción
+Frontend	http://localhost	Aplicación React
+Backend API	http://localhost/api/v1	API REST
+Docs Swagger	http://localhost/docs	Documentación interactiva
+ReDoc	http://localhost/redoc	Documentación alternativa
+PostgreSQL	localhost:5432	Base de datos (conexión directa)
+
+Paso 10: 
+# Entrar al contenedor de PostgreSQL
+docker exec -it analizador-postgres psql -U postgres -d analizador_financiero
+
+# Dentro de psql:
+\dt              # Listar tablas
+\d usuarios      # Ver estructura de tabla usuarios
+\q               # Salir
+
+docker exec -it analizador-postgres psql -U postgres -d analizador_financiero -c "SELECT * FROM monedas;"
+
+Comandos utiles:
+LOGS:
+# Todos los servicios
+docker compose logs -f
+
+# Solo backend
+docker compose logs -f backend
+
+# Últimas 100 líneas
+docker compose logs --tail=100 backend
+
+Reiniciar un servicio especifico: 
+# Reiniciar backend
+docker compose restart backend
+
+# Reiniciar frontend
+docker compose restart frontend
+
+# Reiniciar todo
+docker compose restart
+
+DETENER TODO:
+# Detener sin eliminar contenedores
+docker compose stop
+
+# Detener y eliminar contenedores
+docker compose down
+
+# Detener, eliminar contenedores Y volúmenes (⚠️ pierdes datos de BD)
+docker compose down -v
+
+RECONSTRUIR DESPUES DE CAMBIOS
+# Si cambias código del backend
+docker compose up -d --build backend
+
+# Si cambias código del frontend
+docker compose up -d --build frontend
+
+# Si cambias docker-compose.yml o Dockerfiles
+docker compose down
+docker compose up -d --build
+ 
+ENTRAR A UN CONTENEDOR: 
+# Backend (Python)
+docker exec -it analizador-backend bash
+
+# Frontend (Alpine)
+docker exec -it analizador-frontend sh
+
+# PostgreSQL
+docker exec -it analizador-postgres psql -U postgres -d analizador_financiero

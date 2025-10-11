@@ -2,37 +2,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
-import urllib
 
-# Configurar connection string para SQL Server
-def get_connection_string():
-    if settings.DATABASE_URL:
-        return settings.DATABASE_URL
-    
-    # Construir connection string desde componentes para Azure SQL
-    params = urllib.parse.quote_plus(
-        f'DRIVER={{ODBC Driver 18 for SQL Server}};'
-        f'SERVER={settings.DB_SERVER};'
-        f'DATABASE={settings.DB_NAME};'
-        f'UID={settings.DB_USER};'
-        f'PWD={settings.DB_PASSWORD};'
-        f'Encrypt=yes;'
-        f'TrustServerCertificate=no;'
-        f'Connection Timeout=30;'
-    )
-    return f"mssql+pyodbc:///?odbc_connect={params}"
-
+# Crear engine de PostgreSQL
 engine = create_engine(
-    get_connection_string(),
+    settings.database_url,
     echo=True,  # Para debugging, cambiar a False en producción
     pool_pre_ping=True,  # Verificar conexión antes de usarla
     pool_recycle=300,    # Reciclar conexiones cada 5 minutos
-    connect_args={
-        "check_same_thread": False,
-    }
+    pool_size=10,        # Tamaño del pool de conexiones
+    max_overflow=20      # Máximo de conexiones adicionales
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
 
 # Dependency para obtener la sesión de DB
 def get_db():

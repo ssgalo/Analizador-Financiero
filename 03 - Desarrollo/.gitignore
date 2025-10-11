@@ -1,0 +1,214 @@
+# ============================================
+# ARCHIVOS SENSIBLES - NO SUBIR A GIT
+# ============================================
+
+# Variables de entorno
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# ============================================
+# DOCKER
+# ============================================
+
+# Volúmenes de Docker
+postgres_data/
+mysql_data/
+
+# Docker override (configuraciones locales)
+docker-compose.override.yml
+
+# ============================================
+# BASE DE DATOS
+# ============================================
+
+# Archivos de base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups
+*.sql
+*.dump
+backups/
+
+# ============================================
+# SSL/CERTIFICADOS
+# ============================================
+
+# Certificados SSL
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+nginx/ssl/*.p12
+*.pem
+*.key
+*.crt
+*.p12
+
+# ============================================
+# LOGS
+# ============================================
+
+# Archivos de log
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# SISTEMA OPERATIVO
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# ============================================
+# EDITORES / IDEs
+# ============================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================
+# NODE / FRONTEND
+# ============================================
+
+# Dependencies
+node_modules/
+bower_components/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Cache
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.env.local
+.env.*.local
+
+# ============================================
+# PYTHON / BACKEND
+# ============================================
+
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# ============================================
+# ARCHIVOS TEMPORALES
+# ============================================
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# ============================================
+# DATOS DE PRUEBA / MIGRACIÓN
+# ============================================
+
+# CSVs de datos
+*.csv
+data/
+
+# Scripts de migración temporales
+migration_temp/
+temp_migration/
+
+# ============================================
+# DOCUMENTACIÓN TEMPORAL
+# ============================================
+
+# Notas temporales
+TODO.local.md
+NOTES.local.md
+
