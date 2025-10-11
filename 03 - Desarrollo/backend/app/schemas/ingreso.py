@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime, date
 from typing import Optional
 from decimal import Decimal
+from app.schemas.categoria import CategoriaResponse
 
 class IngresoBase(BaseModel):
     descripcion: str
@@ -33,18 +34,22 @@ class IngresoResponse(IngresoBase):
     id_ingreso: int
     id_usuario: int
     id_categoria: Optional[int] = None
-    estado: str
+    estado: Optional[str] = "confirmado"  # Permite None y usa default
     fecha_creacion: datetime
     fecha_modificacion: Optional[datetime] = None  # Permite None temporalmente
     moneda: str = "ARS"
-    categoria: Optional[dict] = None  # Para incluir datos de la categoría
     
     class Config:
         from_attributes = True
+        # Excluir relaciones que no están en el schema
+        fields = {'categoria': {'exclude': True}}
 
 # Schemas para respuestas con datos relacionados
 class IngresoWithCategoria(IngresoResponse):
-    categoria: Optional[dict] = None
+    categoria: Optional[CategoriaResponse] = None
+    
+    class Config:
+        from_attributes = True
 
 # Schema para estadísticas
 class IngresoStats(BaseModel):

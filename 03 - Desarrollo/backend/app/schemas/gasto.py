@@ -27,7 +27,7 @@ class GastoResponse(GastoBase):
     id_usuario: int
     id_categoria: Optional[int] = None
     fuente: str
-    estado: str
+    estado: Optional[str] = "confirmado"  # Permite None y usa default
     fecha_creacion: datetime
     fecha_modificacion: Optional[datetime] = None  # ✅ Permite None temporalmente
     moneda: str = "ARS"

@@ -49,10 +49,17 @@ def create_ingreso(
     ingreso_data = ingreso_in.dict()
     ingreso_data["id_usuario"] = current_user.id_usuario
     
+    # Asegurar que estado tenga un valor por defecto
+    if "estado" not in ingreso_data or ingreso_data["estado"] is None:
+        ingreso_data["estado"] = "confirmado"
+    
     db_ingreso = Ingreso(**ingreso_data)
     db.add(db_ingreso)
     db.commit()
     db.refresh(db_ingreso)
+    
+    # Expirar relaciones para evitar que se carguen automáticamente
+    db.expire(db_ingreso, ['categoria', 'usuario'])
     
     return db_ingreso
 

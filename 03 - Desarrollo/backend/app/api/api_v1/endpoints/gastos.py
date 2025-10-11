@@ -37,10 +37,17 @@ def create_gasto(
     gasto_data = gasto_in.dict()
     gasto_data["id_usuario"] = current_user.id_usuario
     
+    # ✅ Asegurar que estado tenga un valor por defecto
+    if "estado" not in gasto_data or gasto_data["estado"] is None:
+        gasto_data["estado"] = "confirmado"
+    
     db_gasto = Gasto(**gasto_data)
     db.add(db_gasto)
     db.commit()
     db.refresh(db_gasto)  # ✅ Refresca para obtener valores generados por la BD
+    
+    # Expirar relaciones para evitar que se carguen automáticamente
+    db.expire(db_gasto, ['categoria', 'usuario'])
     
     return db_gasto
 
