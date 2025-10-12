@@ -86,11 +86,11 @@ export default function ChatPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2">
-            {isLoading && conversaciones.length === 0 ? (
+            {isLoading && (!conversaciones || conversaciones.length === 0) ? (
               <div className="flex items-center justify-center h-32">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
               </div>
-            ) : conversaciones.length === 0 ? (
+            ) : !conversaciones || conversaciones.length === 0 ? (
               <div className="text-center text-gray-500 text-sm mt-8">
                 No hay conversaciones aún
               </div>
@@ -115,9 +115,13 @@ export default function ChatPage() {
                       </p>
                     </div>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        eliminarConversacion(conv.id);
+                        try {
+                          await eliminarConversacion(conv.id);
+                        } catch (error) {
+                          console.error('Error al eliminar conversación:', error);
+                        }
                       }}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
                     >
@@ -169,7 +173,7 @@ export default function ChatPage() {
 
           {/* Área de mensajes */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {mensajes.length === 0 ? (
+            {!mensajes || mensajes.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Bot className="w-16 h-16 text-gray-300 mb-4" />
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">

@@ -38,9 +38,11 @@ export const useChat = (): UseChatReturn => {
       setIsLoading(true);
       setError(null);
       const convs = await chatApi.obtenerConversaciones();
-      setConversaciones(convs);
+      setConversaciones(Array.isArray(convs) ? convs : []);
     } catch (err) {
+      console.error('Error al cargar conversaciones:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar conversaciones');
+      setConversaciones([]); // Asegurar que siempre sea un array
     } finally {
       setIsLoading(false);
     }
@@ -125,15 +127,20 @@ export const useChat = (): UseChatReturn => {
     try {
       setIsLoading(true);
       setError(null);
-      await chatApi.eliminarConversacion(id);
-      await cargarConversaciones();
       
-      // Si es la conversación actual, limpiar
+      // Primero limpiar el estado local si es la conversación actual
       if (conversacionActual?.id === id) {
         setConversacionActual(null);
         setMensajes([]);
       }
+      
+      // Luego eliminar en el backend
+      await chatApi.eliminarConversacion(id);
+      
+      // Finalmente recargar la lista
+      await cargarConversaciones();
     } catch (err) {
+      console.error('Error al eliminar conversación:', err);
       setError(err instanceof Error ? err.message : 'Error al eliminar conversación');
     } finally {
       setIsLoading(false);
