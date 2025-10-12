@@ -38,25 +38,39 @@ conversaciones_temp = {}
 
 
 def obtener_contexto_gastos(user_id: int, db: Session) -> str:
-    """Obtiene contexto con datos reales del usuario"""
+    """Obtiene contexto con datos reales e históricos del usuario"""
     try:
         hoy = date.today()
         mes_actual = hoy.month
         anio_actual = hoy.year
         
-        contexto = """Eres un asistente financiero personal especializado en an�lisis de gastos.
+        contexto = """Eres un asistente financiero personal especializado en análisis de gastos.
 
-PRIMER MENSAJE: "�Hola! Soy tu asistente financiero. Estoy aqu� para ayudarte con tus gastos, presupuestos y finanzas. �En qu� puedo ayudarte? "
+PRIMER MENSAJE: "¡Hola! Soy tu asistente financiero. Estoy aquí para ayudarte con tus gastos, presupuestos y finanzas. ¿En qué puedo ayudarte? 💰"
 
-SOLO FINANZAS: Si preguntan sobre temas no financieros, responde: "Disculpa, solo puedo ayudarte con finanzas personales. �Tienes alguna consulta sobre gastos, presupuestos o ahorro? "
+SOLO FINANZAS: Si preguntan sobre temas no financieros, responde: "Disculpa, solo puedo ayudarte con finanzas personales. ¿Tienes alguna consulta sobre gastos, presupuestos o ahorro? 💡"
 """
         
         if user_id == 0:
-            return contexto + "\n Usuario no autenticado (sin datos personales)\n"
+            return contexto + "\n⚠️ Usuario no autenticado (sin datos personales)\n"
         
-        contexto += f"\n DATOS FINANCIEROS DEL USUARIO:\n"
+        # ========== ENCONTRAR ÚLTIMO MES CON DATOS ==========
+        ultimo_gasto = db.query(Gasto).filter(
+            Gasto.id_usuario == user_id,
+            Gasto.estado == 'confirmado'
+        ).order_by(desc(Gasto.fecha)).first()
         
-        # Gastos del mes actual
+        if ultimo_gasto:
+            ultimo_mes_con_datos = ultimo_gasto.fecha.month
+            ultimo_anio_con_datos = ultimo_gasto.fecha.year
+            contexto += f"\n📅 ÚLTIMO MES CON DATOS REGISTRADOS: {ultimo_mes_con_datos:02d}/{ultimo_anio_con_datos}\n"
+        else:
+            contexto += "\n⚠️ No hay gastos registrados en el sistema.\n"
+            return contexto
+        
+        contexto += f"\n📊 DATOS FINANCIEROS DEL USUARIO:\n"
+        
+        # ========== GASTOS DEL MES ACTUAL ==========
         gastos_mes = db.query(Gasto).filter(
             Gasto.id_usuario == user_id,
             Gasto.estado == 'confirmado',
@@ -65,39 +79,104 @@ SOLO FINANZAS: Si preguntan sobre temas no financieros, responde: "Disculpa, sol
         ).all()
         
         total_gastos = sum(float(g.monto) for g in gastos_mes)
-        contexto += f" Total gastado este mes: ${total_gastos:,.2f} ({len(gastos_mes)} gastos)\n"
+        contexto += f"\n💰 MES ACTUAL ({mes_actual}/{anio_actual}):\n"
+        contexto += f"   Total gastado: ${total_gastos:,.2f} ({len(gastos_mes)} transacciones)\n"
         
-        # �ltimos 5 gastos
+        # ========== ÚLTIMOS 10 GASTOS ==========
         ultimos = db.query(Gasto).join(Categoria).filter(
             Gasto.id_usuario == user_id,
             Gasto.estado == 'confirmado'
-        ).order_by(desc(Gasto.fecha)).limit(5).all()
+        ).order_by(desc(Gasto.fecha)).limit(10).all()
         
         if ultimos:
-            contexto += "\n Últimos 5 gastos:\n"
+            contexto += "\n📝 ÚLTIMOS 10 GASTOS:\n"
             for g in ultimos:
                 cat = g.categoria.nombre if g.categoria else "Sin categoría"
+                fecha_str = g.fecha.strftime('%d/%m/%Y')
                 descripcion = f" - {g.descripcion[:30]}" if g.descripcion else ""
-                contexto += f"   ${g.monto:,.2f} en {cat}{descripcion}\n"
+                comercio = f" en {g.comercio[:20]}" if g.comercio else ""
+                contexto += f"   [{fecha_str}] ${g.monto:,.2f} en {cat}{comercio}{descripcion}\n"
         
-        # Top 3 categor�as del mes
+        # ========== TOP 5 CATEGORÍAS DEL MES ==========
         top_cat = db.query(
             Categoria.nombre,
-            func.sum(Gasto.monto).label('total')
+            func.sum(Gasto.monto).label('total'),
+            func.count(Gasto.id_gasto).label('cantidad')
         ).join(Gasto).filter(
             Gasto.id_usuario == user_id,
             Gasto.estado == 'confirmado',
             extract('year', Gasto.fecha) == anio_actual,
             extract('month', Gasto.fecha) == mes_actual
-        ).group_by(Categoria.nombre).order_by(desc('total')).limit(3).all()
+        ).group_by(Categoria.nombre).order_by(desc('total')).limit(5).all()
         
         if top_cat:
-            contexto += "\n Top 3 categor�as del mes:\n"
-            for i, (cat, total) in enumerate(top_cat, 1):
+            contexto += "\n🏆 TOP 5 CATEGORÍAS DEL MES:\n"
+            for i, (cat, total, cant) in enumerate(top_cat, 1):
                 pct = (float(total) / total_gastos * 100) if total_gastos > 0 else 0
-                contexto += f"  {i}. {cat}: ${float(total):,.2f} ({pct:.1f}%)\n"
+                contexto += f"   {i}. {cat}: ${float(total):,.2f} ({pct:.1f}%) - {cant} gastos\n"
         
-        # Ingresos del mes
+        # ========== HISTORIAL DE ÚLTIMOS 6 MESES ==========
+        contexto += "\n📈 HISTORIAL ÚLTIMOS 6 MESES:\n"
+        meses_con_datos = 0
+        for i in range(5, -1, -1):  # De 5 meses atrás hasta el actual
+            mes = mes_actual - i
+            anio = anio_actual
+            if mes <= 0:
+                mes += 12
+                anio -= 1
+            
+            total_mes = db.query(func.sum(Gasto.monto)).filter(
+                Gasto.id_usuario == user_id,
+                Gasto.estado == 'confirmado',
+                extract('year', Gasto.fecha) == anio,
+                extract('month', Gasto.fecha) == mes
+            ).scalar() or 0
+            
+            cant_mes = db.query(func.count(Gasto.id_gasto)).filter(
+                Gasto.id_usuario == user_id,
+                Gasto.estado == 'confirmado',
+                extract('year', Gasto.fecha) == anio,
+                extract('month', Gasto.fecha) == mes
+            ).scalar() or 0
+            
+            if float(total_mes) > 0 or cant_mes > 0:
+                contexto += f"   {mes:02d}/{anio}: ${float(total_mes):,.2f} ({cant_mes} gastos)\n"
+                meses_con_datos += 1
+            else:
+                contexto += f"   {mes:02d}/{anio}: Sin datos registrados\n"
+        
+        if meses_con_datos == 0:
+            contexto += f"   ⚠️ No hay datos en los últimos 6 meses. Último mes con datos: {ultimo_mes_con_datos:02d}/{ultimo_anio_con_datos}\n"
+        
+        # ========== PROMEDIO MENSUAL HISTÓRICO ==========
+        # Calcular promedio de los últimos 6 meses
+        total_6_meses = 0
+        for i in range(6):
+            mes = mes_actual - i
+            anio = anio_actual
+            if mes <= 0:
+                mes += 12
+                anio -= 1
+            
+            total_mes = db.query(func.sum(Gasto.monto)).filter(
+                Gasto.id_usuario == user_id,
+                Gasto.estado == 'confirmado',
+                extract('year', Gasto.fecha) == anio,
+                extract('month', Gasto.fecha) == mes
+            ).scalar() or 0
+            total_6_meses += float(total_mes)
+        
+        promedio_mensual = total_6_meses / 6
+        diferencia_promedio = total_gastos - promedio_mensual
+        pct_vs_promedio = (diferencia_promedio / promedio_mensual * 100) if promedio_mensual > 0 else 0
+        
+        contexto += f"\n📊 PROMEDIO MENSUAL (últimos 6 meses): ${promedio_mensual:,.2f}\n"
+        if diferencia_promedio > 0:
+            contexto += f"   ⚠️ Este mes gastaste ${diferencia_promedio:,.2f} MÁS que el promedio (+{pct_vs_promedio:.1f}%)\n"
+        elif diferencia_promedio < 0:
+            contexto += f"   ✅ Este mes gastaste ${abs(diferencia_promedio):,.2f} MENOS que el promedio ({pct_vs_promedio:.1f}%)\n"
+        
+        # ========== INGRESOS DEL MES ==========
         ingresos_mes = db.query(func.sum(Ingreso.monto)).filter(
             Ingreso.id_usuario == user_id,
             Ingreso.estado == 'confirmado',
@@ -107,14 +186,16 @@ SOLO FINANZAS: Si preguntan sobre temas no financieros, responde: "Disculpa, sol
         
         if ingresos_mes > 0:
             balance = float(ingresos_mes) - total_gastos
-            contexto += f"\n Ingresos del mes: ${float(ingresos_mes):,.2f}\n"
-            contexto += f" Balance: ${balance:,.2f}"
+            pct_gastado = (total_gastos / float(ingresos_mes) * 100) if ingresos_mes > 0 else 0
+            contexto += f"\n💵 INGRESOS DEL MES: ${float(ingresos_mes):,.2f}\n"
+            contexto += f"   Balance: ${balance:,.2f}"
             if balance > 0:
-                contexto += "  (Ahorrando)\n"
+                contexto += f" ✅ (Ahorrando ${balance:,.2f})\n"
             else:
-                contexto += "  (Gastando m�s de lo que ingresas)\n"
+                contexto += f" ⚠️ (Déficit de ${abs(balance):,.2f})\n"
+            contexto += f"   Estás gastando el {pct_gastado:.1f}% de tus ingresos\n"
         
-        # Comparaci�n con mes anterior
+        # ========== COMPARACIÓN CON MES ANTERIOR ==========
         mes_ant = mes_actual - 1 if mes_actual > 1 else 12
         anio_ant = anio_actual if mes_actual > 1 else anio_actual - 1
         
@@ -128,17 +209,46 @@ SOLO FINANZAS: Si preguntan sobre temas no financieros, responde: "Disculpa, sol
         if gastos_ant > 0:
             dif = total_gastos - float(gastos_ant)
             pct = (dif / float(gastos_ant)) * 100
-            contexto += f"\n Mes anterior: ${float(gastos_ant):,.2f}"
+            contexto += f"\n📊 MES ANTERIOR ({mes_ant:02d}/{anio_ant}): ${float(gastos_ant):,.2f}\n"
             if dif > 0:
-                contexto += f" (Gastaste ${dif:,.2f} m�s, +{pct:.1f}%)\n"
+                contexto += f"   ⚠️ Gastaste ${dif:,.2f} MÁS (+{pct:.1f}%)\n"
+            elif dif < 0:
+                contexto += f"   ✅ Gastaste ${abs(dif):,.2f} MENOS ({pct:.1f}%)\n"
             else:
-                contexto += f" (Gastaste ${abs(dif):,.2f} menos, {pct:.1f}%) \n"
+                contexto += f"   = Igual que el mes anterior\n"
         
-        contexto += "\n USA ESTOS DATOS REALES para dar consejos personalizados y específicos.\n"
+        # ========== CATEGORÍAS HISTÓRICAS (últimos 3 meses) ==========
+        contexto += "\n📂 CATEGORÍAS MÁS USADAS (últimos 3 meses):\n"
+        for i in range(3):
+            mes = mes_actual - i
+            anio = anio_actual
+            if mes <= 0:
+                mes += 12
+                anio -= 1
+            
+            top_cat_hist = db.query(
+                Categoria.nombre,
+                func.sum(Gasto.monto).label('total')
+            ).join(Gasto).filter(
+                Gasto.id_usuario == user_id,
+                Gasto.estado == 'confirmado',
+                extract('year', Gasto.fecha) == anio,
+                extract('month', Gasto.fecha) == mes
+            ).group_by(Categoria.nombre).order_by(desc('total')).limit(3).all()
+            
+            if top_cat_hist:
+                contexto += f"   {mes:02d}/{anio}: "
+                contexto += ", ".join([f"{cat} ${float(total):,.0f}" for cat, total in top_cat_hist])
+                contexto += "\n"
+        
+        contexto += "\n💡 USA ESTOS DATOS HISTÓRICOS para dar consejos personalizados, identificar patrones de gasto y sugerir mejoras.\n"
+        contexto += f"\n⚠️ IMPORTANTE: Si el usuario pregunta por un mes SIN DATOS, indícale que su último mes con datos registrados es {ultimo_mes_con_datos:02d}/{ultimo_anio_con_datos} y sugiérele que registre nuevos gastos.\n"
         return contexto
         
     except Exception as e:
         print(f"❌ Error al obtener contexto: {str(e)}", flush=True)
+        import traceback
+        traceback.print_exc()
         return "Eres un asistente financiero personal."
 
 
