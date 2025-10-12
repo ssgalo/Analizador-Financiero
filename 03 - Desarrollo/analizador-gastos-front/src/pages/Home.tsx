@@ -11,7 +11,6 @@ import {
   BarChart3,
   MessageSquare,
   Upload,
-  Calendar,
   Target,
   Wallet,
   ShoppingCart,
@@ -27,16 +26,14 @@ import {
 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { useDashboard } from "../hooks/useDashboard"
-import { formatCurrency, formatDisplayDate } from "../utils/formatters"
+import { formatCurrency } from "../utils/formatters"
 import { useAuthStore } from '../stores/authStore';
 
 const Home: React.FC = () => {
   const { user } = useAuthStore();
   const { 
     usuario, 
-    gastos, 
     estadisticas, 
-    recomendaciones, 
     isLoading, 
     error, 
     refreshData 
@@ -257,18 +254,71 @@ const Home: React.FC = () => {
           </Card>
         </div>
 
-        {/* Quick Actions & Recent Transactions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Acciones Rápidas</CardTitle>
-              <CardDescription>Funciones más utilizadas</CardDescription>
+        {/* Distribución de Ingresos por Categoría */}
+        <Card className="mt-6">
+          <CardHeader>
+              <CardTitle>Distribución de Ingresos por Categoría</CardTitle>
+              <CardDescription>Tus ingresos organizados por categoría este mes</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {estadisticas?.ingresosPorCategoria && estadisticas.ingresosPorCategoria.length > 0 ? (
+                  estadisticas.ingresosPorCategoria.map((ingreso, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-gray-200 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {ingreso.categoria}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {ingreso.cantidad} {ingreso.cantidad === 1 ? 'ingreso' : 'ingresos'}
+                        </span>
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">
+                        ${formatCurrency(ingreso.total)}
+                      </p>
+                      <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{ 
+                            width: `${estadisticas.totalIngresos > 0 ? (ingreso.total / estadisticas.totalIngresos) * 100 : 0}%` 
+                          }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {estadisticas.totalIngresos > 0 ? ((ingreso.total / estadisticas.totalIngresos) * 100).toFixed(1) : '0'}% del total
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    <PieChart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm">No hay ingresos por categoría</p>
+                    <p className="text-xs mt-1">Los ingresos aparecerán aquí cuando los registres</p>
+                  </div>
+                )}
+              </div>
+              <Link to="/ingresos">
+                <Button variant="outline" className="w-full mt-4 bg-transparent hover:bg-slate-100 hover:border-slate-300">
+                  Ver Todos los Ingresos
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+        {/* Acciones Rápidas */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Acciones Rápidas</CardTitle>
+            <CardDescription>Funciones más utilizadas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link to="/importar">
                 <Button 
-                  className="w-full justify-start bg-transparent transition-all duration-200" 
+                  className="w-full justify-center bg-transparent transition-all duration-200" 
                   variant="outline"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#f1f5f9';
@@ -285,7 +335,7 @@ const Home: React.FC = () => {
               </Link>
               <Link to="/chat">
                 <Button 
-                  className="w-full justify-start bg-transparent transition-all duration-200" 
+                  className="w-full justify-center bg-transparent transition-all duration-200" 
                   variant="outline"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#f1f5f9';
@@ -301,157 +351,20 @@ const Home: React.FC = () => {
                 </Button>
               </Link>
               <Link to="/reportes">
-                <Button className="w-full justify-start bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
+                <Button className="w-full justify-center bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Ver Reportes
                 </Button>
               </Link>
               <Link to="/integraciones">
-                <Button className="w-full justify-start bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
+                <Button className="w-full justify-center bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
                   <CreditCard className="w-4 h-4 mr-2" />
                   Conectar Cuenta
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
-
-          {/* Recent Transactions */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Transacciones Recientes</CardTitle>
-              <CardDescription>Tus últimos movimientos financieros</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {gastos.length > 0 ? (
-                  gastos.slice(0, 4).map((gasto) => {
-                    return (
-                      <div
-                        key={gasto.id_gasto}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coral/20">
-                            <TrendingDown className="w-5 h-5 text-coral" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{gasto.comercio}</div>
-                            <div className="text-sm text-gray-600 flex items-center space-x-2">
-                              <span>{gasto.categoria?.nombre || 'Sin categoría'}</span>
-                              <span>•</span>
-                              <span>{formatDisplayDate(gasto.fecha)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="font-semibold text-coral">
-                          -${formatCurrency(gasto.monto)}
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm">No hay transacciones recientes</p>
-                    <p className="text-xs mt-1">Los gastos aparecerán aquí cuando los registres</p>
-                  </div>
-                )}
-              </div>
-              <Link to="/gastos">
-                <Button variant="outline" className="w-full mt-4 bg-transparent hover:bg-slate-100 hover:border-slate-300">
-                  Ver Todas las Transacciones
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* AI Insights */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MessageSquare className="w-5 h-5 text-teal" />
-              <span>Recomendaciones de IA</span>
-            </CardTitle>
-            <CardDescription>Insights personalizados basados en tus hábitos de gasto</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recomendaciones.map((recomendacion) => {
-                let IconComponent = PieChart;
-                let colorClass = "text-blue-600";
-                let bgClass = "bg-blue-50 border-blue-200";
-                
-                switch (recomendacion.tipo) {
-                  case 'ahorro':
-                    IconComponent = TrendingUp;
-                    colorClass = "text-teal";
-                    bgClass = "bg-teal/20 border-teal/40";
-                    break;
-                  case 'recordatorio':
-                    IconComponent = Calendar;
-                    colorClass = "text-amber-600";
-                    bgClass = "bg-amber-50 border-amber-200";
-                    break;
-                  case 'analisis':
-                    IconComponent = PieChart;
-                    colorClass = "text-blue-600";
-                    bgClass = "bg-blue-50 border-blue-200";
-                    break;
-                  case 'alerta':
-                    IconComponent = TrendingDown;
-                    colorClass = "text-red-600";
-                    bgClass = "bg-red-50 border-red-200";
-                    break;
-                }
-
-                return (
-                  <div key={recomendacion.id} className={`p-4 rounded-lg border ${bgClass}`}>
-                    <div className="flex items-center space-x-2 mb-2">
-                      <IconComponent className={`w-4 h-4 ${colorClass}`} />
-                      <span className={`font-medium ${colorClass}`}>
-                        {recomendacion.titulo}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground">
-                      {recomendacion.mensaje}
-                    </p>
-                  </div>
-                );
-              })}
             </div>
           </CardContent>
         </Card>
-
-        {/* Información del usuario */}
-        <div className="bg-white rounded-lg shadow p-6 mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Información de la cuenta</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Nombre</label>
-              <p className="mt-1 text-sm text-gray-900">{user?.nombre}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Usuario</label>
-              <p className="mt-1 text-sm text-gray-900">@{user?.usuario}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <p className="mt-1 text-sm text-gray-900">{user?.email}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Estado</label>
-              <span className={`
-                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                ${user?.estado === 'activo' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'}
-              `}>
-                {user?.estado === 'activo' ? '✅ Activo' : '❌ Inactivo'}
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

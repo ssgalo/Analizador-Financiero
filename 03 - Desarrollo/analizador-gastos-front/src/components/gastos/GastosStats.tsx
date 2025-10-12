@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
-import { DollarSign, FileText, Calendar } from "lucide-react"
+import { DollarSign, FileText } from "lucide-react"
 import { formatCurrency } from "../../utils/formatters"
 
 interface GastosStatsProps {
@@ -8,22 +8,21 @@ interface GastosStatsProps {
 }
 
 export function GastosStats({ totalGastos, cantidadGastos }: GastosStatsProps) {
-  const promedioGasto = cantidadGastos > 0 ? Math.round(totalGastos / cantidadGastos) : 0;
-  const mesActual = new Date().toLocaleDateString('es-AR', { month: 'long' })
-    .replace(/^\w/, c => c.toUpperCase());
+  // Asegurar que los valores sean números válidos
+  const totalValido = typeof totalGastos === 'number' && !isNaN(totalGastos) ? totalGastos : 0;
+  const cantidadValida = typeof cantidadGastos === 'number' && !isNaN(cantidadGastos) ? cantidadGastos : 0;
+  
+  const promedioGasto = cantidadValida > 0 ? Math.round(totalValido / cantidadValida) : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Gastos</CardTitle>
+          <CardTitle className="text-sm font-medium">Total de gastos</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">${formatCurrency(totalGastos)}</div>
-          <p className="text-xs text-muted-foreground">
-            {cantidadGastos} transacciones
-          </p>
+          <div className="text-2xl font-bold">${formatCurrency(totalValido)}</div>
         </CardContent>
       </Card>
 
@@ -36,20 +35,16 @@ export function GastosStats({ totalGastos, cantidadGastos }: GastosStatsProps) {
           <div className="text-2xl font-bold">
             ${formatCurrency(promedioGasto)}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Últimos {cantidadGastos} gastos
-          </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Período</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Cantidad de gastos</CardTitle>
+          <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{mesActual}</div>
-          <p className="text-xs text-muted-foreground">Mes actual</p>
+          <div className="text-2xl font-bold">{cantidadValida}</div>
         </CardContent>
       </Card>
     </div>

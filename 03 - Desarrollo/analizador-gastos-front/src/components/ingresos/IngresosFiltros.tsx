@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Calendar, Tag, AlertCircle } from 'lucide-react';
-import { categoriasService, ingresosService, type Categoria, type OpcionesTipos } from '../../services/api';
+import { X, Search, Calendar, Tag } from 'lucide-react';
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { categoriasService, type Categoria } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 interface IngresosFiltrosProps {
@@ -10,19 +12,16 @@ interface IngresosFiltrosProps {
 
 const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filtrosActivos }) => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [opcionesTipos, setOpcionesTipos] = useState<OpcionesTipos | null>(null);
   const [loading, setLoading] = useState(false);
+  const [textoBusqueda, setTextoBusqueda] = useState(filtrosActivos.busqueda || '');
   
   // Estados del formulario
   const [filtros, setFiltros] = useState({
     categoria_id: filtrosActivos.categoria_id || '',
-    tipo: filtrosActivos.tipo || '',
-    estado: filtrosActivos.estado || '',
     fecha_desde: filtrosActivos.fecha_desde || '',
     fecha_hasta: filtrosActivos.fecha_hasta || '',
     monto_min: filtrosActivos.monto_min || '',
-    monto_max: filtrosActivos.monto_max || '',
-    descripcion: filtrosActivos.descripcion || ''
+    monto_max: filtrosActivos.monto_max || ''
   });
 
   const { user } = useAuthStore();
@@ -31,18 +30,42 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     cargarDatos();
   }, [user]);
 
+  // Sincronizar el estado local con los filtros activos del padre
+  useEffect(() => {
+    setFiltros({
+      categoria_id: filtrosActivos.categoria ? filtrosActivos.categoria.toString() : '',
+      fecha_desde: filtrosActivos.fecha_desde || '',
+      fecha_hasta: filtrosActivos.fecha_hasta || '',
+      monto_min: filtrosActivos.monto_desde ? filtrosActivos.monto_desde.toString() : '',
+      monto_max: filtrosActivos.monto_hasta ? filtrosActivos.monto_hasta.toString() : ''
+    });
+    
+    setTextoBusqueda(filtrosActivos.busqueda || '');
+  }, [filtrosActivos]);
+
   const cargarDatos = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      const [categoriasData, tiposData] = await Promise.all([
-        categoriasService.getCategoriasUsuario(user.id_usuario),
-        ingresosService.getOpcionesTipos()
-      ]);
+      const categoriasData = await categoriasService.getCategoriasUsuario(user.id_usuario);
       
-      setCategorias(categoriasData);
-      setOpcionesTipos(tiposData);
+      // Lista específica de categorías permitidas para ingresos
+      const categoriasIngresos = ['bonos', 'freelance', 'inversiones', 'regalos', 'otros', 'salario', 'ventas'];
+      
+      // Filtrar solo las categorías de ingresos
+      const categoriasFiltradas = categoriasData
+        .filter(categoria => categoriasIngresos.includes(categoria.nombre.toLowerCase()));
+      
+      // Eliminar duplicados basándose en el nombre (case insensitive)
+      const categoriasUnicas = categoriasFiltradas.filter((categoria, index, array) => 
+        index === array.findIndex(c => c.nombre.toLowerCase() === categoria.nombre.toLowerCase())
+      );
+      
+      // Ordenar alfabéticamente
+      const categoriasOrdenadas = categoriasUnicas.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      
+      setCategorias(categoriasOrdenadas);
     } catch (error) {
       console.error('Error al cargar datos de filtros:', error);
     } finally {
@@ -54,31 +77,64 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     const nuevosFiltros = { ...filtros, [field]: value };
     setFiltros(nuevosFiltros);
     
-    // Filtrar valores vacíos antes de enviar
-    const filtrosLimpios = Object.fromEntries(
-      Object.entries(nuevosFiltros).filter(([_, v]) => v !== '')
-    );
+    // Crear objeto de filtros para enviar al hook
+    const filtrosParaHook: any = {};
     
-    onFiltrosChange(filtrosLimpios);
+    // Mapear categoria_id a categoria para que el hook lo entienda
+    if (nuevosFiltros.categoria_id) {
+      filtrosParaHook.categoria = parseInt(nuevosFiltros.categoria_id);
+    }
+    
+    // Mapear los otros campos
+    if (nuevosFiltros.fecha_desde) filtrosParaHook.fecha_desde = nuevosFiltros.fecha_desde;
+    if (nuevosFiltros.fecha_hasta) filtrosParaHook.fecha_hasta = nuevosFiltros.fecha_hasta;
+    if (nuevosFiltros.monto_min) filtrosParaHook.monto_desde = parseFloat(nuevosFiltros.monto_min);
+    if (nuevosFiltros.monto_max) filtrosParaHook.monto_hasta = parseFloat(nuevosFiltros.monto_max);
+    
+    onFiltrosChange(filtrosParaHook);
   };
 
   const limpiarFiltros = () => {
     const filtrosVacios = {
       categoria_id: '',
-      tipo: '',
-      estado: '',
       fecha_desde: '',
       fecha_hasta: '',
       monto_min: '',
-      monto_max: '',
-      descripcion: ''
+      monto_max: ''
     };
     setFiltros(filtrosVacios);
-    onFiltrosChange({});
+    setTextoBusqueda('');
+    
+    // Limpiar todos los filtros en el hook también
+    onFiltrosChange({
+      categoria: undefined,
+      fecha_desde: undefined,
+      fecha_hasta: undefined,
+      monto_desde: undefined,
+      monto_hasta: undefined,
+      busqueda: ''
+    });
   };
 
-  const contarFiltrosActivos = () => {
-    return Object.values(filtros).filter(valor => valor !== '').length;
+  const hayFiltrosActivos = () => {
+    const tieneFormulario = Object.values(filtros).some(valor => valor !== '');
+    const tieneBusqueda = filtrosActivos.busqueda && filtrosActivos.busqueda.trim();
+    return tieneFormulario || tieneBusqueda;
+  };
+
+  const realizarBusqueda = () => {
+    onFiltrosChange({ busqueda: textoBusqueda });
+  };
+
+  const limpiarBusqueda = () => {
+    setTextoBusqueda('');
+    onFiltrosChange({ busqueda: '' });
+  };
+
+  const manejarEnterBusqueda = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      realizarBusqueda();
+    }
   };
 
   if (loading) {
@@ -86,8 +142,8 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, index) => (
               <div key={index} className="h-10 bg-gray-200 rounded"></div>
             ))}
           </div>
@@ -97,29 +153,55 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2">
-          <Search className="h-5 w-5 text-gray-500" />
-          <h3 className="text-lg font-semibold text-gray-900">
-            Filtros de Búsqueda
-          </h3>
-          {contarFiltrosActivos() > 0 && (
-            <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-              {contarFiltrosActivos()} activo{contarFiltrosActivos() !== 1 ? 's' : ''}
-            </span>
-          )}
+    <div className="p-4 space-y-4">
+      {/* Barra de búsqueda separada arriba */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Buscar ingresos</label>
+        <div className="relative max-w-lg flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por comercio, descripción o categoría..."
+              value={textoBusqueda}
+              onChange={(e) => setTextoBusqueda(e.target.value)}
+              onKeyDown={manejarEnterBusqueda}
+              className="pl-10 pr-10 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+            />
+            {textoBusqueda && (
+              <button
+                onClick={limpiarBusqueda}
+                className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Limpiar búsqueda"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Button
+            onClick={realizarBusqueda}
+            className="h-10 px-4 bg-teal-500 hover:bg-teal-600 text-white"
+            title="Buscar"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
         </div>
-        <button
-          onClick={limpiarFiltros}
-          className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          <X className="h-4 w-4" />
-          <span>Limpiar</span>
-        </button>
+        {filtrosActivos.busqueda && (
+          <p className="text-sm text-green-600 mt-1">
+            Buscando: "{filtrosActivos.busqueda}" 
+            <button 
+              onClick={() => onFiltrosChange({ busqueda: '' })}
+              className="ml-2 text-green-600 hover:text-green-800 underline"
+            >
+              limpiar
+            </button>
+          </p>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Filtros en una sola fila */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Filtros avanzados</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {/* Categoría */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -138,59 +220,6 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Tipo */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tipo de Ingreso
-          </label>
-          <select
-            value={filtros.tipo}
-            onChange={(e) => handleInputChange('tipo', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          >
-            <option value="">Todos los tipos</option>
-            {opcionesTipos?.tipos.map((tipo) => (
-              <option key={tipo.value} value={tipo.value}>
-                {tipo.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Estado */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <AlertCircle className="h-4 w-4 inline mr-1" />
-            Estado
-          </label>
-          <select
-            value={filtros.estado}
-            onChange={(e) => handleInputChange('estado', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          >
-            <option value="">Todos los estados</option>
-            {opcionesTipos?.estados.map((estado) => (
-              <option key={estado.value} value={estado.value}>
-                {estado.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Descripción */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Descripción
-          </label>
-          <input
-            type="text"
-            value={filtros.descripcion}
-            onChange={(e) => handleInputChange('descripcion', e.target.value)}
-            placeholder="Buscar en descripción..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
         </div>
 
         {/* Fecha desde */}
@@ -233,7 +262,7 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
             placeholder="0"
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
 
@@ -249,20 +278,24 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
             placeholder="Sin límite"
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
-      </div>
-
-      {/* Información de resultados */}
-      {contarFiltrosActivos() > 0 && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-700">
-            Se están aplicando {contarFiltrosActivos()} filtro{contarFiltrosActivos() !== 1 ? 's' : ''}.
-            Los resultados se actualizan automáticamente.
-          </p>
         </div>
-      )}
+
+        {/* Botón limpiar filtros - solo aparece si hay filtros activos */}
+        {hayFiltrosActivos() && (
+          <div className="flex justify-end">
+            <button
+              onClick={limpiarFiltros}
+              className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+            >
+              <X className="h-4 w-4" />
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

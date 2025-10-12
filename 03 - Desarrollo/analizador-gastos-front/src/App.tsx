@@ -16,6 +16,7 @@ import ConfiguracionPage from './pages/ConfiguracionPage';
 import ChatPage from './pages/ChatPage';
 import ImportarPage from './pages/ImportarPage';
 import IntegracionesPage from './pages/IntegracionesPage';
+import AcercaDePage from './pages/AcercaDePage';
 
 // Estilos
 import './App.css';
@@ -103,6 +104,14 @@ const App: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <ConfiguracionPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/acerca-de" element={
+            <ProtectedRoute>
+              <Layout>
+                <AcercaDePage />
               </Layout>
             </ProtectedRoute>
           } />

@@ -1,15 +1,21 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
 import { Edit, Trash2, Loader2, Coffee, Car, Home as HomeIcon, Smartphone, ShoppingCart, Heart, Book, Wifi } from "lucide-react"
-import type { Gasto } from "../../services/api"
+import type { Gasto, Categoria } from "../../services/api"
 import { formatCurrency, formatDisplayDate } from "../../utils/formatters"
+import { GastosFiltros } from "./GastosFiltros"
 
 interface GastosTablaProps {
   gastos: Gasto[]
   isLoading: boolean
   onEditar: (gasto: Gasto) => void
   onEliminar: (gasto: Gasto) => void
+  // Props para filtros
+  categorias: Categoria[]
+  filtros: any
+  onFiltrosChange: (filtros: any) => void
+  onLimpiarFiltros: () => void
 }
 
 // Mapeo de iconos por categoría
@@ -33,7 +39,16 @@ const fuenteColors: { [key: string]: string } = {
   'banco': 'bg-gray-100 text-gray-800'
 };
 
-export function GastosTabla({ gastos, isLoading, onEditar, onEliminar }: GastosTablaProps) {
+export function GastosTabla({ 
+  gastos, 
+  isLoading, 
+  onEditar, 
+  onEliminar,
+  categorias,
+  filtros,
+  onFiltrosChange,
+  onLimpiarFiltros 
+}: GastosTablaProps) {
   if (isLoading) {
     return (
       <Card>
@@ -62,22 +77,47 @@ export function GastosTabla({ gastos, isLoading, onEditar, onEliminar }: GastosT
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lista de Gastos</CardTitle>
-        <CardDescription>
-          {gastos.length} gasto{gastos.length !== 1 ? 's' : ''} encontrado{gastos.length !== 1 ? 's' : ''}
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Lista de Gastos</CardTitle>
+          </div>
+        </div>
+        
+        {/* Filtros incorporados */}
+        <div className="mt-4">
+          <GastosFiltros
+            filtros={filtros}
+            categorias={categorias}
+            onFiltrosChange={onFiltrosChange}
+            onLimpiarFiltros={onLimpiarFiltros}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Comercio</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Fuente</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-              <TableHead className="text-center">Acciones</TableHead>
+            <TableRow className="bg-gray-100">
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Fecha
+              </TableHead>
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Comercio
+              </TableHead>
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Descripción
+              </TableHead>
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Categoría
+              </TableHead>
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Fuente
+              </TableHead>
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Monto
+              </TableHead>
+              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+                Acciones
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

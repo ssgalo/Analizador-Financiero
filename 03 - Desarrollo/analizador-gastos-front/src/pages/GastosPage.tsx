@@ -3,7 +3,6 @@ import { Button } from "../components/ui/button"
 import { Plus, RefreshCw } from "lucide-react"
 import { FormularioGasto } from "../components/forms/FormularioGasto"
 import { GastosStats } from "../components/gastos/GastosStats"
-import { GastosFiltros } from "../components/gastos/GastosFiltros"
 import { GastosTabla } from "../components/gastos/GastosTabla"
 import { ModalEliminarGasto } from "../components/gastos/ModalEliminarGasto"
 import { useGastos } from "../hooks/useGastos"
@@ -127,20 +126,16 @@ function GastosPage() {
           cantidadGastos={gastos.length} 
         />
 
-        {/* Componente de Filtros */}
-        <GastosFiltros
-          filtros={filtros}
-          categorias={categorias}
-          onFiltrosChange={setFiltros}
-          onLimpiarFiltros={limpiarFiltros}
-        />
-
-        {/* Componente de Tabla */}
+        {/* Componente de Tabla con Filtros Incorporados */}
         <GastosTabla
           gastos={gastos}
           isLoading={isLoading}
           onEditar={handleEditarGasto}
           onEliminar={abrirModalEliminar}
+          categorias={categorias}
+          filtros={filtros}
+          onFiltrosChange={setFiltros}
+          onLimpiarFiltros={limpiarFiltros}
         />
       </div>
 

@@ -1,11 +1,10 @@
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
+import { useState, useEffect } from "react"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Select } from "../ui/select"
 import { DateInput } from "../ui/date-input"
 import { MoneyInput } from "../ui/money-input"
-import { Search, Filter, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 import type { Categoria } from "../../services/api"
 import { formatDateToLocal, formatDateToISO, parseLocalNumber } from "../../utils/formatters"
 
@@ -32,9 +31,22 @@ export function GastosFiltros({
   onFiltrosChange, 
   onLimpiarFiltros 
 }: GastosFiltrosProps) {
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [montoDesde, setMontoDesde] = useState('');
   const [montoHasta, setMontoHasta] = useState('');
+  const [textoBusqueda, setTextoBusqueda] = useState('');
+
+  // Sincronizar estados locales cuando se limpien los filtros
+  useEffect(() => {
+    if (!filtros.monto_desde) {
+      setMontoDesde('');
+    }
+    if (!filtros.monto_hasta) {
+      setMontoHasta('');
+    }
+    if (!filtros.busqueda) {
+      setTextoBusqueda('');
+    }
+  }, [filtros.monto_desde, filtros.monto_hasta, filtros.busqueda]);
 
   const opcionesCategorias = [
     { value: '', label: 'Todas las categorías' },
@@ -46,8 +58,7 @@ export function GastosFiltros({
     { value: 'manual', label: 'Manual' },
     { value: 'PDF', label: 'PDF' },
     { value: 'imagen', label: 'Imagen' },
-    { value: 'MercadoPago', label: 'MercadoPago' },
-    { value: 'banco', label: 'Banco' }
+    { value: 'MercadoPago', label: 'MercadoPago' }
   ];
 
   const handleMontoDesdeChange = (value: string) => {
@@ -62,120 +73,164 @@ export function GastosFiltros({
     onFiltrosChange({ monto_hasta: numValue });
   };
 
+  const realizarBusqueda = () => {
+    onFiltrosChange({ busqueda: textoBusqueda });
+  };
+
+  const limpiarBusqueda = () => {
+    setTextoBusqueda('');
+    onFiltrosChange({ busqueda: '' });
+  };
+
+  const manejarEnterBusqueda = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      realizarBusqueda();
+    }
+  };
+
   const hayFiltrosActivos = !!(
     filtros.busqueda || 
     filtros.fecha_desde || 
     filtros.fecha_hasta || 
     filtros.categoria || 
-    filtros.fuente
+    filtros.fuente ||
+    filtros.monto_desde ||
+    filtros.monto_hasta
   );
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Filtros y Búsqueda</CardTitle>
-            <CardDescription>Encuentra gastos específicos usando los filtros</CardDescription>
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={() => setMostrarFiltros(!mostrarFiltros)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f1f5f9';
-              e.currentTarget.style.borderColor = '#94a3b8';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#e2e8f0';
-            }}
-            className="transition-all duration-200"
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            {mostrarFiltros ? 'Ocultar' : 'Mostrar'} Filtros
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Búsqueda siempre visible */}
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+    <div className="p-4 space-y-4">
+      {/* Barra de búsqueda separada arriba */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Buscar gastos</label>
+        <div className="relative max-w-lg flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Buscar por comercio, descripción o categoría..."
-              value={filtros.busqueda || ''}
-              onChange={(e) => onFiltrosChange({ busqueda: e.target.value })}
-              className="pl-10"
+              value={textoBusqueda}
+              onChange={(e) => setTextoBusqueda(e.target.value)}
+              onKeyDown={manejarEnterBusqueda}
+              className="pl-10 pr-10 h-10 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
             />
+            {textoBusqueda && (
+              <button
+                onClick={limpiarBusqueda}
+                className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Limpiar búsqueda"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
+          <Button
+            onClick={realizarBusqueda}
+            className="h-10 px-4 bg-teal-600 hover:bg-teal-700 text-white"
+            title="Buscar"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
+        {filtros.busqueda && (
+          <p className="text-sm text-teal-600 mt-1">
+            Buscando: "{filtros.busqueda}" 
+            <button 
+              onClick={() => onFiltrosChange({ busqueda: '' })}
+              className="ml-2 text-teal-600 hover:text-teal-800 underline"
+            >
+              Limpiar
+            </button>
+          </p>
+        )}
+      </div>
+
+      {/* Filtros en fila compacta */}
+      <div className="border-t pt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-3">Filtros avanzados</label>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-end">
+        {/* Fecha desde */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Desde</label>
+          <DateInput
+            value={filtros.fecha_desde ? formatDateToLocal(filtros.fecha_desde) : ''}
+            onChange={(value) => onFiltrosChange({ fecha_desde: value ? formatDateToISO(value) : undefined })}
+            placeholder="dd/mm/aaaa"
+            className="h-9 text-sm"
+          />
         </div>
 
-        {/* Filtros avanzados */}
-        {mostrarFiltros && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <DateInput
-              label="Fecha desde"
-              value={filtros.fecha_desde ? formatDateToLocal(filtros.fecha_desde) : ''}
-              onChange={(value) => onFiltrosChange({ fecha_desde: value ? formatDateToISO(value) : undefined })}
-              placeholder="dd/mm/aaaa"
-            />
-            <DateInput
-              label="Fecha hasta"
-              value={filtros.fecha_hasta ? formatDateToLocal(filtros.fecha_hasta) : ''}
-              onChange={(value) => onFiltrosChange({ fecha_hasta: value ? formatDateToISO(value) : undefined })}
-              placeholder="dd/mm/aaaa"
-            />
-            <Select
-              label="Categoría"
-              options={opcionesCategorias}
-              value={filtros.categoria?.toString() || ''}
-              onChange={(e) => onFiltrosChange({ categoria: e.target.value ? parseInt(e.target.value) : undefined })}
-            />
-            
-            <MoneyInput
-              label="Monto desde"
-              value={montoDesde}
-              onChange={handleMontoDesdeChange}
-              placeholder="0,00"
-            />
-            <MoneyInput
-              label="Monto hasta"
-              value={montoHasta}
-              onChange={handleMontoHastaChange}
-              placeholder="0,00"
-            />
-            <Select
-              label="Fuente"
-              options={opcionesFuentes}
-              value={filtros.fuente || ''}
-              onChange={(e) => onFiltrosChange({ fuente: e.target.value })}
-            />
-          </div>
-        )}
+        {/* Fecha hasta */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Hasta</label>
+          <DateInput
+            value={filtros.fecha_hasta ? formatDateToLocal(filtros.fecha_hasta) : ''}
+            onChange={(value) => onFiltrosChange({ fecha_hasta: value ? formatDateToISO(value) : undefined })}
+            placeholder="dd/mm/aaaa"
+            className="h-9 text-sm"
+          />
+        </div>
 
-        {/* Botón limpiar filtros */}
-        {hayFiltrosActivos && (
-          <div className="mt-4 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={onLimpiarFiltros} 
-              size="sm"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f1f5f9';
-                e.currentTarget.style.borderColor = '#94a3b8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = '#e2e8f0';
-              }}
-              className="transition-all duration-200"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Limpiar Filtros
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        {/* Categoría */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Categoría</label>
+          <Select
+            options={opcionesCategorias}
+            value={filtros.categoria?.toString() || ''}
+            onChange={(e) => onFiltrosChange({ categoria: e.target.value ? parseInt(e.target.value) : undefined })}
+            className="h-9 text-sm"
+          />
+        </div>
+
+        {/* Monto desde */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Monto desde</label>
+          <MoneyInput
+            value={montoDesde}
+            onChange={handleMontoDesdeChange}
+            placeholder="0,00"
+            className="h-9 text-sm"
+          />
+        </div>
+
+        {/* Monto hasta */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Monto hasta</label>
+          <MoneyInput
+            value={montoHasta}
+            onChange={handleMontoHastaChange}
+            placeholder="0,00"
+            className="h-9 text-sm"
+          />
+        </div>
+
+        {/* Fuente */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Fuente</label>
+          <Select
+            options={opcionesFuentes}
+            value={filtros.fuente || ''}
+            onChange={(e) => onFiltrosChange({ fuente: e.target.value })}
+            className="h-9 text-sm"
+          />
+        </div>
+        </div>
+      </div>
+
+      {/* Botón limpiar filtros */}
+      {hayFiltrosActivos && (
+        <div className="flex justify-start">
+          <Button 
+            variant="outline" 
+            onClick={onLimpiarFiltros} 
+            size="sm"
+            className="h-8 px-3 text-xs"
+            title="Limpiar todos los filtros"
+          >
+            <X className="w-3 h-3 mr-1" />
+            Limpiar Filtros
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

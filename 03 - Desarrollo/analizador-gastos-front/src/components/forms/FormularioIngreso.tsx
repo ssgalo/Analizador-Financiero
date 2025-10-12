@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
-import { ingresosService, categoriasService, type IngresoCreate, type Categoria, type OpcionesTipos } from '../../services/api';
+import { ingresosService, categoriasService, type IngresoCreate, type Categoria } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 interface FormularioIngresoProps {
@@ -13,22 +13,22 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
   const [loadingDatos, setLoadingDatos] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [opcionesTipos, setOpcionesTipos] = useState<OpcionesTipos | null>(null);
+  // const [opcionesTipos, setOpcionesTipos] = useState<OpcionesTipos | null>(null);
 
   const { user } = useAuthStore();
 
   // Estados del formulario
   const [formData, setFormData] = useState<IngresoCreate>({
     descripcion: '',
-    monto: 0,
+    monto: undefined as any, // Cambiar de 0 a undefined para que el campo esté vacío
     fecha: new Date().toISOString().split('T')[0],
-    fuente: '',
-    tipo: 'salario',
-    recurrente: false,
-    frecuencia: 'unica',
+    fuente: 'manual', // Valor por defecto 'manual'
+    tipo: 'salario', // Valor por defecto fijo
+    recurrente: false, // Valor por defecto fijo
+    frecuencia: 'unica', // Valor por defecto fijo
     id_categoria: undefined,
     notas: '',
-    moneda: 'ARS'
+    moneda: 'ARS' // Valor por defecto fijo
   });
 
   useEffect(() => {
@@ -40,13 +40,25 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
     
     setLoadingDatos(true);
     try {
-      const [categoriasData, tiposData] = await Promise.all([
-        categoriasService.getCategoriasUsuario(user.id_usuario),
-        ingresosService.getOpcionesTipos()
-      ]);
+      const categoriasData = await categoriasService.getCategorias();
       
-      setCategorias(categoriasData);
-      setOpcionesTipos(tiposData);
+      // Filtrar solo las categorías específicas para ingresos
+      const categoriasIngresos = ['bonos', 'freelance', 'inversiones', 'regalos', 'otros', 'salario', 'ventas'];
+      
+      const categoriasFiltradas = categoriasData
+        .filter(categoria => categoriasIngresos.includes(categoria.nombre.toLowerCase()));
+
+      // Eliminar duplicados basándose en el nombre (case insensitive)
+      const categoriasSinDuplicados = categoriasFiltradas.filter((categoria, index, array) => 
+        index === array.findIndex(c => c.nombre.toLowerCase() === categoria.nombre.toLowerCase())
+      );
+      
+      console.log('🔍 Debug - Todas las categorías para ingresos:', categoriasData.map(c => c.nombre));
+      console.log('🔍 Debug - Categorías filtradas para ingresos:', categoriasFiltradas.map(c => c.nombre));
+      console.log('🔍 Debug - Categorías sin duplicados para ingresos:', categoriasSinDuplicados.map(c => c.nombre));
+      
+      setCategorias(categoriasSinDuplicados);
+      // setOpcionesTipos(tiposData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       setError('Error al cargar los datos del formulario');
@@ -76,8 +88,13 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
       return;
     }
     
-    if (formData.monto <= 0) {
+    if (!formData.monto || formData.monto <= 0) {
       setError('El monto debe ser mayor a 0');
+      return;
+    }
+
+    if (!formData.id_categoria) {
+      setError('La categoría es obligatoria');
       return;
     }
 
@@ -148,42 +165,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Descripción y Monto */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FileText className="h-4 w-4 inline mr-1" />
-                Descripción *
-              </label>
-              <input
-                type="text"
-                value={formData.descripcion}
-                onChange={(e) => handleInputChange('descripcion', e.target.value)}
-                placeholder="ej: Sueldo Octubre 2025"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <DollarSign className="h-4 w-4 inline mr-1" />
-                Monto *
-              </label>
-              <input
-                type="number"
-                value={formData.monto}
-                onChange={(e) => handleInputChange('monto', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Fecha y Fuente */}
+          {/* Fecha y Monto */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -199,124 +181,73 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               />
             </div>
 
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fuente
+                Monto *
               </label>
+              <DollarSign className="absolute left-3 top-9 h-4 w-4 text-gray-500" />
               <input
                 type="text"
-                value={formData.fuente}
-                onChange={(e) => handleInputChange('fuente', e.target.value)}
-                placeholder="ej: Empresa ABC SA"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Tipo y Categoría */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Ingreso *
-              </label>
-              <select
-                value={formData.tipo}
-                onChange={(e) => handleInputChange('tipo', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                value={formData.monto || ''}
+                onChange={(e) => handleInputChange('monto', parseFloat(e.target.value.replace(',', '.')) || 0)}
+                placeholder="0,00"
+                className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
-              >
-                {opcionesTipos?.tipos.map((tipo) => (
-                  <option key={tipo.value} value={tipo.value}>
-                    {tipo.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Tag className="h-4 w-4 inline mr-1" />
-                Categoría
-              </label>
-              <select
-                value={formData.id_categoria || ''}
-                onChange={(e) => handleInputChange('id_categoria', e.target.value ? parseInt(e.target.value) : undefined)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Sin categoría</option>
-                {categorias.map((categoria) => (
-                  <option key={categoria.id_categoria} value={categoria.id_categoria}>
-                    {categoria.nombre}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
-          {/* Recurrencia */}
-          <div className="space-y-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="recurrente"
-                checked={formData.recurrente}
-                onChange={(e) => handleInputChange('recurrente', e.target.checked)}
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-              />
-              <label htmlFor="recurrente" className="ml-2 text-sm text-gray-700">
-                Es un ingreso recurrente
-              </label>
-            </div>
-
-            {formData.recurrente && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Frecuencia
-                </label>
-                <select
-                  value={formData.frecuencia}
-                  onChange={(e) => handleInputChange('frecuencia', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  {opcionesTipos?.frecuencias.map((frecuencia) => (
-                    <option key={frecuencia.value} value={frecuencia.value}>
-                      {frecuencia.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+          {/* Descripción */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <FileText className="h-4 w-4 inline mr-1" />
+              Descripción *
+            </label>
+            <input
+              type="text"
+              value={formData.descripcion}
+              onChange={(e) => handleInputChange('descripcion', e.target.value)}
+              placeholder="ej: Sueldo Octubre 2025"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              required
+            />
           </div>
 
-          {/* Moneda y Notas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Moneda
-              </label>
-              <select
-                value={formData.moneda}
-                onChange={(e) => handleInputChange('moneda', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="ARS">ARS - Peso Argentino</option>
-                <option value="USD">USD - Dólar Estadounidense</option>
-                <option value="EUR">EUR - Euro</option>
-              </select>
-            </div>
+          {/* Categoría */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categoría *
+            </label>
+            <Tag className="absolute left-3 top-9 h-4 w-4 text-gray-500" />
+            <select
+              value={formData.id_categoria || ''}
+              onChange={(e) => handleInputChange('id_categoria', e.target.value ? parseInt(e.target.value) : undefined)}
+              className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              required
+            >
+              <option value="">Seleccionar categoría</option>
+              {categorias
+                .sort((a, b) => a.nombre.localeCompare(b.nombre)) // Ordenar alfabéticamente
+                .map((categoria) => (
+                <option key={categoria.id_categoria} value={categoria.id_categoria}>
+                  {categoria.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notas
-              </label>
-              <textarea
-                value={formData.notas}
-                onChange={(e) => handleInputChange('notas', e.target.value)}
-                placeholder="Observaciones adicionales..."
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-              />
-            </div>
+          {/* Notas */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notas
+            </label>
+            <textarea
+              value={formData.notas}
+              onChange={(e) => handleInputChange('notas', e.target.value)}
+              placeholder="Observaciones adicionales..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+            />
           </div>
 
           {/* Error */}

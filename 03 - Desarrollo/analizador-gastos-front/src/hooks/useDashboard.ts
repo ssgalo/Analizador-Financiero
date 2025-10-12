@@ -31,6 +31,12 @@ interface GastoPorCategoria {
   color: string;
 }
 
+interface IngresoPorCategoria {
+  categoria: string;
+  total: number;
+  cantidad: number;
+}
+
 interface TendenciaMensual {
   mes: string;
   ingresos: number;
@@ -41,6 +47,7 @@ interface Estadisticas {
   totalGastos: number;
   totalIngresos: number;
   gastosPorCategoria: GastoPorCategoria[];
+  ingresosPorCategoria: IngresoPorCategoria[];
   tendenciaMensual: TendenciaMensual[];
 }
 
@@ -137,6 +144,13 @@ export const useDashboard = (): UseDashboardReturn => {
 
       // Procesar estadísticas de ingresos
       const totalIngresos = parseFloat(ingresosStatsResponse.total_ingresos?.toString() || '0');
+      const ingresosPorCategoria: IngresoPorCategoria[] = Object.entries(ingresosStatsResponse.ingresos_por_categoria || {})
+        .map(([categoria, data]: [string, any]) => ({
+          categoria,
+          total: parseFloat(data.total?.toString() || '0'),
+          cantidad: parseInt(data.cantidad?.toString() || '0')
+        }))
+        .sort((a, b) => b.total - a.total);
 
       // Generar tendencia mensual (últimos 6 meses)
       const tendenciaMensual: TendenciaMensual[] = [];
@@ -172,6 +186,7 @@ export const useDashboard = (): UseDashboardReturn => {
         totalGastos,
         totalIngresos,
         gastosPorCategoria,
+        ingresosPorCategoria,
         tendenciaMensual
       };
 
@@ -225,6 +240,7 @@ export const useDashboard = (): UseDashboardReturn => {
         totalGastos: 0,
         totalIngresos: 0,
         gastosPorCategoria: [],
+        ingresosPorCategoria: [],
         tendenciaMensual: []
       });
       setRecomendaciones([]);

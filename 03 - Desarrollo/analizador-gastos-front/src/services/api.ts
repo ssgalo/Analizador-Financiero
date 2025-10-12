@@ -158,6 +158,15 @@ export interface Categoria {
   icono?: string;
 }
 
+export interface CategoriaCreate {
+  nombre: string;
+  descripcion?: string;
+  es_personalizada?: boolean;
+  id_usuario?: number;
+  color?: string;
+  icono?: string;
+}
+
 export interface Gasto {
   id_gasto: number;
   id_usuario: number;
@@ -291,6 +300,12 @@ export const categoriasService = {
   // Obtener una categoría por ID
   async getCategoria(id: number): Promise<Categoria> {
     const response = await apiClient.get<Categoria>(`/categorias/${id}`);
+    return response.data;
+  },
+
+  // Crear una nueva categoría
+  async createCategoria(categoria: CategoriaCreate): Promise<Categoria> {
+    const response = await apiClient.post<Categoria>('/categorias/', categoria);
     return response.data;
   }
 };

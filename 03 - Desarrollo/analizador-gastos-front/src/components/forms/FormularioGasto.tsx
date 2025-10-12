@@ -86,7 +86,9 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
 
   const opcionesCategorias = [
     { value: '', label: 'Selecciona una categoría' },
-    ...categorias.map(cat => ({ value: cat.id_categoria.toString(), label: cat.nombre }))
+    ...categorias
+      .sort((a, b) => a.nombre.localeCompare(b.nombre)) // Ordenar alfabéticamente
+      .map(cat => ({ value: cat.id_categoria.toString(), label: cat.nombre }))
   ]
 
 
