@@ -12,7 +12,7 @@ interface UseChatReturn {
   isLoading: boolean;
   isTyping: boolean;
   error: string | null;
-  enviarMensaje: (mensaje: string, contextoGastos?: boolean) => Promise<void>;
+  enviarMensaje: (mensaje: string) => Promise<void>;
   cargarConversaciones: () => Promise<void>;
   seleccionarConversacion: (id: string) => Promise<void>;
   nuevaConversacion: () => Promise<void>;
@@ -53,10 +53,15 @@ export const useChat = (): UseChatReturn => {
       setIsLoading(true);
       setError(null);
       const conv = await chatApi.obtenerConversacion(id);
-      setConversacionActual(conv);
-      setMensajes(conv.mensajes);
+      const mensajes = await chatApi.obtenerMensajes(id);
+      setConversacionActual({
+        ...conv,
+        mensajes: mensajes || []
+      });
+      setMensajes(Array.isArray(mensajes) ? mensajes : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar conversación');
+      setMensajes([]); // Limpiar mensajes en caso de error
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +82,7 @@ export const useChat = (): UseChatReturn => {
     }
   }, [cargarConversaciones]);
 
-  const enviarMensaje = useCallback(async (mensaje: string, contextoGastos = true) => {
+  const enviarMensaje = useCallback(async (mensaje: string) => {
     if (!mensaje.trim()) return;
 
     const nuevoMensajeUsuario: ChatMessage = {
@@ -96,7 +101,6 @@ export const useChat = (): UseChatReturn => {
       const response = await chatApi.enviarMensaje({
         mensaje,
         conversacion_id: conversacionActual?.id,
-        contexto_gastos: contextoGastos,
       });
 
       const mensajeAsistente: ChatMessage = {

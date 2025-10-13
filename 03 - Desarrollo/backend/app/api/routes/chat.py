@@ -6,9 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 import uuid
-import sys
 from datetime import datetime, date
-from calendar import monthrange
 
 from app.schemas.chat import (
     ChatMensajeRequest,
@@ -29,12 +27,8 @@ from app.models.categoria import Categoria
 
 router = APIRouter()
 
-# Almacenamiento temporal de conversaciones (en producción usar base de datos)
+# Almacenamiento temporal de conversaciones
 conversaciones = {}
-
-
-# ============================================================================
-conversaciones_temp = {}
 
 
 def obtener_contexto_gastos(user_id: int, db: Session) -> str:
@@ -245,16 +239,9 @@ SOLO FINANZAS: Si preguntan sobre temas no financieros, responde: "Disculpa, sol
         contexto += f"\n⚠️ IMPORTANTE: Si el usuario pregunta por un mes SIN DATOS, indícale que su último mes con datos registrados es {ultimo_mes_con_datos:02d}/{ultimo_anio_con_datos} y sugiérele que registre nuevos gastos.\n"
         return contexto
         
-    except Exception as e:
-        print(f"❌ Error al obtener contexto: {str(e)}", flush=True)
-        import traceback
-        traceback.print_exc()
+    except Exception:
         return "Eres un asistente financiero personal."
 
-
-# ============================================================================
-# ENDPOINTS
-# ============================================================================
 
 @router.post("/mensaje", response_model=ChatMensajeResponse)
 async def enviar_mensaje(
@@ -264,13 +251,8 @@ async def enviar_mensaje(
 ):
     """Enviar un mensaje al asistente IA y recibir respuesta"""
     try:
-        # Obtener adaptador de IA
         adaptador = obtener_adaptador_ia()
-        
-        # ID del usuario (puede ser None si no está autenticado)
         user_id = current_user.id_usuario if current_user else None
-        
-        # Obtener o crear conversación
         conversacion_id = request.conversacion_id or str(uuid.uuid4())
         
         if conversacion_id not in conversaciones:
@@ -283,7 +265,6 @@ async def enviar_mensaje(
                 "fecha_actualizacion": datetime.now().isoformat()
             }
         
-        # Agregar mensaje del usuario
         mensaje_usuario = {
             "id": str(uuid.uuid4()),
             "rol": "user",
@@ -292,24 +273,15 @@ async def enviar_mensaje(
         }
         conversaciones[conversacion_id]["mensajes"].append(mensaje_usuario)
         
-        # Preparar historial de mensajes para el modelo
         historial = [
             ChatMessage(role=msg["rol"], content=msg["contenido"])
             for msg in conversaciones[conversacion_id]["mensajes"]
         ]
         
-        # Obtener contexto financiero del usuario
         contexto_adicional = ""
-        
-        # Si hay usuario autenticado, usar su ID
         if user_id:
-            print(f"🔍 Obteniendo contexto para user_id: {user_id}", file=sys.stderr, flush=True)
             contexto_adicional = obtener_contexto_gastos(user_id, db)
-            print(f"📊 Contexto obtenido: {len(contexto_adicional)} caracteres", file=sys.stderr, flush=True)
-        else:
-            print(f"⚠️ NO HAY user_id autenticado - Chat funcionará sin contexto personalizado", file=sys.stderr, flush=True)
         
-        # Generar respuesta del asistente
         respuesta_ia = await adaptador.generar_respuesta(
             mensajes=historial,
             contexto_adicional=contexto_adicional,
@@ -317,7 +289,6 @@ async def enviar_mensaje(
             max_tokens=request.max_tokens
         )
         
-        # Agregar respuesta del asistente
         mensaje_asistente = {
             "id": str(uuid.uuid4()),
             "rol": "assistant",
@@ -349,16 +320,12 @@ async def obtener_conversaciones(
     
     resultado = []
     for conv_id, conv in conversaciones.items():
-        # Si hay usuario, filtrar por sus conversaciones
         if user_id and conv.get("user_id") != user_id:
             continue
-        # Si no hay usuario, mostrar conversaciones sin usuario asignado
         if not user_id and conv.get("user_id") is not None:
             continue
             
         ultimo_mensaje = conv["mensajes"][-1]["contenido"] if conv["mensajes"] else ""
-        
-        # Asegurar que siempre hay un título
         titulo = conv.get("titulo") or f"Conversación {conv.get('fecha_creacion', '')[:10]}"
         
         resultado.append(ChatConversacionResumen(
@@ -388,7 +355,6 @@ async def obtener_conversacion(
     user_id = current_user.id_usuario if current_user else None
     conv = conversaciones[conversacion_id]
     
-    # Verificar permisos
     if user_id and conv.get("user_id") != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -422,7 +388,6 @@ async def obtener_mensajes_conversacion(
     user_id = current_user.id_usuario if current_user else None
     conv = conversaciones[conversacion_id]
     
-    # Verificar permisos
     if user_id and conv.get("user_id") != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -455,7 +420,6 @@ async def eliminar_conversacion(
     user_id = current_user.id_usuario if current_user else None
     conv = conversaciones[conversacion_id]
     
-    # Verificar permisos
     if user_id and conv.get("user_id") != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -474,8 +438,6 @@ async def crear_conversacion(
     """Crear una nueva conversación"""
     user_id = current_user.id_usuario if current_user else None
     conversacion_id = str(uuid.uuid4())
-    
-    # Si no hay título, generar uno por defecto
     titulo = request.titulo if request.titulo else f"Conversación {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     
     conversaciones[conversacion_id] = {

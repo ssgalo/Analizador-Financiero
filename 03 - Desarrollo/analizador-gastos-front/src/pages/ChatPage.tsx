@@ -21,7 +21,6 @@ export default function ChatPage() {
   } = useChat();
 
   const [inputMensaje, setInputMensaje] = useState('');
-  const [contextoGastos, setContextoGastos] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,7 +32,7 @@ export default function ChatPage() {
   const handleEnviar = async () => {
     if (!inputMensaje.trim() || isTyping) return;
     
-    await enviarMensaje(inputMensaje, contextoGastos);
+    await enviarMensaje(inputMensaje);
     setInputMensaje('');
   };
 
@@ -159,16 +158,6 @@ export default function ChatPage() {
                 </div>
               </div>
             </div>
-            
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={contextoGastos}
-                onChange={(e) => setContextoGastos(e.target.checked)}
-                className="rounded cursor-pointer"
-              />
-              <span className="text-gray-600">Incluir contexto de gastos</span>
-            </label>
           </div>
 
           {/* Área de mensajes */}

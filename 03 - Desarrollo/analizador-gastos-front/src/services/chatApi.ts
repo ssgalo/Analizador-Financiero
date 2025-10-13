@@ -21,7 +21,6 @@ export interface ChatConversation {
 export interface ChatRequest {
   mensaje: string;
   conversacion_id?: string;
-  contexto_gastos?: boolean;
 }
 
 export interface ChatResponse {
@@ -105,6 +104,24 @@ export const chatApi = {
     if (!response.ok) {
       throw new Error(`Error al eliminar conversación: ${response.status}`);
     }
+  },
+
+  /**
+   * Obtiene los mensajes de una conversación específica
+   */
+  async obtenerMensajes(conversacionId: string): Promise<ChatMessage[]> {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/api/v1/chat/conversaciones/${conversacionId}/mensajes`, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener mensajes: ${response.status}`);
+    }
+
+    return response.json();
   },
 
   /**
