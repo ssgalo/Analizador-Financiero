@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Calendar, Tag } from 'lucide-react';
+import { X, Search, Calendar, Tag, DollarSign } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { categoriasService, type Categoria } from '../../services/api';
@@ -15,14 +15,12 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
   const [loading, setLoading] = useState(false);
   const [textoBusqueda, setTextoBusqueda] = useState(filtrosActivos.busqueda || '');
   
-  // Estados del formulario
-  const [filtros, setFiltros] = useState({
-    categoria_id: filtrosActivos.categoria_id || '',
-    fecha_desde: filtrosActivos.fecha_desde || '',
-    fecha_hasta: filtrosActivos.fecha_hasta || '',
-    monto_min: filtrosActivos.monto_min || '',
-    monto_max: filtrosActivos.monto_max || ''
-  });
+  // Estados locales para todos los filtros (no se aplican hasta presionar "Aplicar filtros")
+  const [categoriaLocal, setCategoriaLocal] = useState(filtrosActivos.categoria_id || '');
+  const [fechaDesdeLocal, setFechaDesdeLocal] = useState(filtrosActivos.fecha_desde || '');
+  const [fechaHastaLocal, setFechaHastaLocal] = useState(filtrosActivos.fecha_hasta || '');
+  const [montoMinLocal, setMontoMinLocal] = useState(filtrosActivos.monto_min || '');
+  const [montoMaxLocal, setMontoMaxLocal] = useState(filtrosActivos.monto_max || '');
 
   const { user } = useAuthStore();
 
@@ -30,17 +28,24 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     cargarDatos();
   }, [user]);
 
-  // Sincronizar el estado local con los filtros activos del padre
+  // Sincronizar el estado local con los filtros activos del padre (solo cuando se limpian externamente)
   useEffect(() => {
-    setFiltros({
-      categoria_id: filtrosActivos.categoria ? filtrosActivos.categoria.toString() : '',
-      fecha_desde: filtrosActivos.fecha_desde || '',
-      fecha_hasta: filtrosActivos.fecha_hasta || '',
-      monto_min: filtrosActivos.monto_desde ? filtrosActivos.monto_desde.toString() : '',
-      monto_max: filtrosActivos.monto_hasta ? filtrosActivos.monto_hasta.toString() : ''
-    });
+    // Solo resetear si todos los filtros están vacíos (cuando se limpian externamente)
+    const todosFiltrosVacios = !filtrosActivos.categoria && 
+                               !filtrosActivos.fecha_desde && 
+                               !filtrosActivos.fecha_hasta && 
+                               !filtrosActivos.monto_desde && 
+                               !filtrosActivos.monto_hasta &&
+                               !filtrosActivos.busqueda;
     
-    setTextoBusqueda(filtrosActivos.busqueda || '');
+    if (todosFiltrosVacios) {
+      setCategoriaLocal('');
+      setFechaDesdeLocal('');
+      setFechaHastaLocal('');
+      setMontoMinLocal('');
+      setMontoMaxLocal('');
+      setTextoBusqueda('');
+    }
   }, [filtrosActivos]);
 
   const cargarDatos = async () => {
@@ -73,36 +78,32 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    const nuevosFiltros = { ...filtros, [field]: value };
-    setFiltros(nuevosFiltros);
-    
-    // Crear objeto de filtros para enviar al hook
+  const aplicarFiltros = () => {
+    // Crear objeto de filtros para enviar al hook usando estados locales
     const filtrosParaHook: any = {};
     
     // Mapear categoria_id a categoria para que el hook lo entienda
-    if (nuevosFiltros.categoria_id) {
-      filtrosParaHook.categoria = parseInt(nuevosFiltros.categoria_id);
+    if (categoriaLocal) {
+      filtrosParaHook.categoria = parseInt(categoriaLocal);
     }
     
     // Mapear los otros campos
-    if (nuevosFiltros.fecha_desde) filtrosParaHook.fecha_desde = nuevosFiltros.fecha_desde;
-    if (nuevosFiltros.fecha_hasta) filtrosParaHook.fecha_hasta = nuevosFiltros.fecha_hasta;
-    if (nuevosFiltros.monto_min) filtrosParaHook.monto_desde = parseFloat(nuevosFiltros.monto_min);
-    if (nuevosFiltros.monto_max) filtrosParaHook.monto_hasta = parseFloat(nuevosFiltros.monto_max);
+    if (fechaDesdeLocal) filtrosParaHook.fecha_desde = fechaDesdeLocal;
+    if (fechaHastaLocal) filtrosParaHook.fecha_hasta = fechaHastaLocal;
+    if (montoMinLocal) filtrosParaHook.monto_desde = parseFloat(montoMinLocal);
+    if (montoMaxLocal) filtrosParaHook.monto_hasta = parseFloat(montoMaxLocal);
+    if (textoBusqueda) filtrosParaHook.busqueda = textoBusqueda;
     
     onFiltrosChange(filtrosParaHook);
   };
 
-  const limpiarFiltros = () => {
-    const filtrosVacios = {
-      categoria_id: '',
-      fecha_desde: '',
-      fecha_hasta: '',
-      monto_min: '',
-      monto_max: ''
-    };
-    setFiltros(filtrosVacios);
+  const limpiarTodosFiltros = () => {
+    // Limpiar estados locales
+    setCategoriaLocal('');
+    setFechaDesdeLocal('');
+    setFechaHastaLocal('');
+    setMontoMinLocal('');
+    setMontoMaxLocal('');
     setTextoBusqueda('');
     
     // Limpiar todos los filtros en el hook también
@@ -116,19 +117,55 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     });
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    // Actualizar el estado local correspondiente
+    switch (field) {
+      case 'categoria_id':
+        setCategoriaLocal(value);
+        break;
+      case 'fecha_desde':
+        setFechaDesdeLocal(value);
+        break;
+      case 'fecha_hasta':
+        setFechaHastaLocal(value);
+        break;
+      case 'monto_min':
+        setMontoMinLocal(value);
+        break;
+      case 'monto_max':
+        setMontoMaxLocal(value);
+        break;
+    }
+    
+    // NO aplicar filtros automáticamente - el usuario debe presionar "Aplicar filtros"
+  };
+
+  const handleMontoMinChange = (value: string) => {
+    setMontoMinLocal(value);
+  };
+
+  const handleMontoMaxChange = (value: string) => {
+    setMontoMaxLocal(value);
+  };
+
   const hayFiltrosActivos = () => {
-    const tieneFormulario = Object.values(filtros).some(valor => valor !== '');
-    const tieneBusqueda = filtrosActivos.busqueda && filtrosActivos.busqueda.trim();
-    return tieneFormulario || tieneBusqueda;
+    return !!(
+      filtrosActivos.categoria ||
+      filtrosActivos.fecha_desde ||
+      filtrosActivos.fecha_hasta ||
+      filtrosActivos.monto_desde ||
+      filtrosActivos.monto_hasta ||
+      filtrosActivos.busqueda
+    );
   };
 
   const realizarBusqueda = () => {
-    onFiltrosChange({ busqueda: textoBusqueda });
+    aplicarFiltros(); // Usar aplicarFiltros en lugar de onFiltrosChange directo
   };
 
   const limpiarBusqueda = () => {
     setTextoBusqueda('');
-    onFiltrosChange({ busqueda: '' });
+    aplicarFiltros(); // Aplicar filtros sin búsqueda
   };
 
   const manejarEnterBusqueda = (e: React.KeyboardEvent) => {
@@ -209,7 +246,7 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
             Categoría
           </label>
           <select
-            value={filtros.categoria_id}
+            value={categoriaLocal}
             onChange={(e) => handleInputChange('categoria_id', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           >
@@ -230,7 +267,7 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
           </label>
           <input
             type="date"
-            value={filtros.fecha_desde}
+            value={fechaDesdeLocal}
             onChange={(e) => handleInputChange('fecha_desde', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
@@ -244,7 +281,7 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
           </label>
           <input
             type="date"
-            value={filtros.fecha_hasta}
+            value={fechaHastaLocal}
             onChange={(e) => handleInputChange('fecha_hasta', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
@@ -255,15 +292,18 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Monto mínimo
           </label>
-          <input
-            type="number"
-            value={filtros.monto_min}
-            onChange={(e) => handleInputChange('monto_min', e.target.value)}
-            placeholder="0"
-            min="0"
-            step="0.01"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
+          <div className="relative">
+            <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              type="number"
+              value={montoMinLocal}
+              onChange={(e) => handleMontoMinChange(e.target.value)}
+              placeholder="0,00"
+              min="0"
+              step="0.01"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
         </div>
 
         {/* Monto máximo */}
@@ -271,30 +311,39 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Monto máximo
           </label>
-          <input
-            type="number"
-            value={filtros.monto_max}
-            onChange={(e) => handleInputChange('monto_max', e.target.value)}
-            placeholder="Sin límite"
-            min="0"
-            step="0.01"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
+          <div className="relative">
+            <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              type="number"
+              value={montoMaxLocal}
+              onChange={(e) => handleMontoMaxChange(e.target.value)}
+              placeholder="Sin límite"
+              min="0"
+              step="0.01"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
         </div>
         </div>
 
-        {/* Botón limpiar filtros - solo aparece si hay filtros activos */}
-        {hayFiltrosActivos() && (
-          <div className="flex justify-end">
-            <button
-              onClick={limpiarFiltros}
-              className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+        {/* Botones de acción */}
+        <div className="flex justify-end gap-3 mt-4">
+          <Button
+            onClick={aplicarFiltros}
+            className="bg-teal-500 hover:bg-teal-600 text-white"
+          >
+            Aplicar filtros
+          </Button>
+          {hayFiltrosActivos() && (
+            <Button
+              onClick={limpiarTodosFiltros}
+              variant="outline"
+              className="text-gray-600 border-gray-300 hover:bg-gray-50"
             >
-              <X className="h-4 w-4" />
-              <span>Limpiar filtros</span>
-            </button>
-          </div>
-        )}
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

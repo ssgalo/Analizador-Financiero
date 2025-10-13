@@ -22,7 +22,7 @@ interface Props {
   ingresos: Ingreso[];
   isLoading: boolean;
   onEditarIngreso: (ingreso: Ingreso) => void;
-  onEliminarIngreso: (id: number) => void;
+  onEliminarIngreso: (ingreso: Ingreso) => void;
   // Props para filtros
   filtrosActivos: any;
   onFiltrosChange: (filtros: any) => void;
@@ -89,7 +89,7 @@ export const IngresosTabla = ({
               {ingresos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    No hay ingresos para mostrar
+                    No hay ingresos que coincidan con los filtros aplicados.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -143,7 +143,7 @@ export const IngresosTabla = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onEliminarIngreso(ingreso.id_ingreso)}
+                            onClick={() => onEliminarIngreso(ingreso)}
                             className="h-10 w-10 p-0 hover:bg-red-50 hover:text-red-600"
                           >
                             <Trash2 className="h-5 w-5" />

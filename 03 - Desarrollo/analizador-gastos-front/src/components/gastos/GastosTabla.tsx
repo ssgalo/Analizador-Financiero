@@ -62,18 +62,6 @@ export function GastosTabla({
     );
   }
 
-  if (gastos.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center">
-            <p className="text-muted-foreground">No se encontraron gastos con los filtros aplicados.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -83,7 +71,7 @@ export function GastosTabla({
           </div>
         </div>
         
-        {/* Filtros incorporados */}
+        {/* Filtros incorporados - siempre visibles */}
         <div className="mt-4">
           <GastosFiltros
             filtros={filtros}
@@ -98,30 +86,37 @@ export function GastosTabla({
           <TableHeader>
             <TableRow className="bg-gray-100">
               <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Fecha
-              </TableHead>
-              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Comercio
-              </TableHead>
-              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Descripción
-              </TableHead>
-              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Categoría
-              </TableHead>
-              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Fuente
-              </TableHead>
-              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Monto
-              </TableHead>
-              <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
-                Acciones
-              </TableHead>
+              Fecha
+            </TableHead>
+            <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+              Comercio
+            </TableHead>
+            <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+              Descripción
+            </TableHead>
+            <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+              Categoría
+            </TableHead>
+            <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+              Fuente
+            </TableHead>
+            <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+              Monto
+            </TableHead>
+            <TableHead className="font-bold text-gray-800 bg-gray-200 border border-gray-300 rounded-lg mx-1 px-3 py-2 text-center">
+              Acciones
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {gastos.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                No hay gastos que coincidan con los filtros aplicados.
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {gastos.map((gasto) => {
+          ) : (
+            gastos.map((gasto) => {
               const IconComponent = iconMap[gasto.categoria?.nombre || ''] || ShoppingCart;
               
               return (
@@ -183,9 +178,10 @@ export function GastosTabla({
                   </TableCell>
                 </TableRow>
               );
-            })}
-          </TableBody>
-        </Table>
+            })
+          )}
+        </TableBody>
+      </Table>
       </CardContent>
     </Card>
   );

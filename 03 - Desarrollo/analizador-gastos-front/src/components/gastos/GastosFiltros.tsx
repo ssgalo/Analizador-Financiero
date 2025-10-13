@@ -34,19 +34,35 @@ export function GastosFiltros({
   const [montoDesde, setMontoDesde] = useState('');
   const [montoHasta, setMontoHasta] = useState('');
   const [textoBusqueda, setTextoBusqueda] = useState('');
+  
+  // Estados locales para todos los filtros
+  const [filtrosLocales, setFiltrosLocales] = useState<FiltrosState>({
+    fecha_desde: '',
+    fecha_hasta: '',
+    categoria: undefined,
+    fuente: ''
+  });
 
-  // Sincronizar estados locales cuando se limpien los filtros
+  // Solo sincronizar cuando los filtros se vacían completamente (limpieza)
   useEffect(() => {
-    if (!filtros.monto_desde) {
+    const estaVacio = !filtros.fecha_desde && !filtros.fecha_hasta && 
+                      !filtros.categoria && !filtros.fuente && 
+                      !filtros.monto_desde && !filtros.monto_hasta && 
+                      !filtros.busqueda;
+    
+    if (estaVacio) {
       setMontoDesde('');
-    }
-    if (!filtros.monto_hasta) {
       setMontoHasta('');
-    }
-    if (!filtros.busqueda) {
       setTextoBusqueda('');
+      setFiltrosLocales({
+        fecha_desde: '',
+        fecha_hasta: '',
+        categoria: undefined,
+        fuente: ''
+      });
     }
-  }, [filtros.monto_desde, filtros.monto_hasta, filtros.busqueda]);
+    // NO resetear los valores de monto si hay filtros activos
+  }, [filtros]);
 
   const opcionesCategorias = [
     { value: '', label: 'Todas las categorías' },
@@ -63,29 +79,66 @@ export function GastosFiltros({
 
   const handleMontoDesdeChange = (value: string) => {
     setMontoDesde(value);
-    const numValue = value ? parseLocalNumber(value) : undefined;
-    onFiltrosChange({ monto_desde: numValue });
+    // No aplicar filtros inmediatamente
   };
 
   const handleMontoHastaChange = (value: string) => {
     setMontoHasta(value);
-    const numValue = value ? parseLocalNumber(value) : undefined;
-    onFiltrosChange({ monto_hasta: numValue });
+    // No aplicar filtros inmediatamente
+  };
+
+  const aplicarFiltros = () => {
+    const filtrosParaAplicar: Partial<FiltrosState> = {
+      ...filtrosLocales,
+      monto_desde: montoDesde ? parseLocalNumber(montoDesde) : undefined,
+      monto_hasta: montoHasta ? parseLocalNumber(montoHasta) : undefined,
+      busqueda: textoBusqueda
+    };
+    onFiltrosChange(filtrosParaAplicar);
+  };
+
+  const handleFiltroLocalChange = (campo: keyof FiltrosState, valor: any) => {
+    setFiltrosLocales(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
   };
 
   const realizarBusqueda = () => {
-    onFiltrosChange({ busqueda: textoBusqueda });
+    aplicarFiltros();
   };
 
   const limpiarBusqueda = () => {
     setTextoBusqueda('');
-    onFiltrosChange({ busqueda: '' });
+    // Aplicar filtros sin búsqueda
+    const filtrosParaAplicar: Partial<FiltrosState> = {
+      ...filtrosLocales,
+      monto_desde: montoDesde ? parseLocalNumber(montoDesde) : undefined,
+      monto_hasta: montoHasta ? parseLocalNumber(montoHasta) : undefined,
+      busqueda: ''
+    };
+    onFiltrosChange(filtrosParaAplicar);
   };
 
   const manejarEnterBusqueda = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       realizarBusqueda();
     }
+  };
+
+  const limpiarTodosLosFiltros = () => {
+    // Limpiar estados locales
+    setMontoDesde('');
+    setMontoHasta('');
+    setTextoBusqueda('');
+    setFiltrosLocales({
+      fecha_desde: '',
+      fecha_hasta: '',
+      categoria: undefined,
+      fuente: ''
+    });
+    // Limpiar filtros aplicados
+    onLimpiarFiltros();
   };
 
   const hayFiltrosActivos = !!(
@@ -152,8 +205,8 @@ export function GastosFiltros({
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Desde</label>
           <DateInput
-            value={filtros.fecha_desde ? formatDateToLocal(filtros.fecha_desde) : ''}
-            onChange={(value) => onFiltrosChange({ fecha_desde: value ? formatDateToISO(value) : undefined })}
+            value={filtrosLocales.fecha_desde ? formatDateToLocal(filtrosLocales.fecha_desde) : ''}
+            onChange={(value) => handleFiltroLocalChange('fecha_desde', value ? formatDateToISO(value) : '')}
             placeholder="dd/mm/aaaa"
             className="h-9 text-sm"
           />
@@ -163,8 +216,8 @@ export function GastosFiltros({
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Hasta</label>
           <DateInput
-            value={filtros.fecha_hasta ? formatDateToLocal(filtros.fecha_hasta) : ''}
-            onChange={(value) => onFiltrosChange({ fecha_hasta: value ? formatDateToISO(value) : undefined })}
+            value={filtrosLocales.fecha_hasta ? formatDateToLocal(filtrosLocales.fecha_hasta) : ''}
+            onChange={(value) => handleFiltroLocalChange('fecha_hasta', value ? formatDateToISO(value) : '')}
             placeholder="dd/mm/aaaa"
             className="h-9 text-sm"
           />
@@ -175,8 +228,8 @@ export function GastosFiltros({
           <label className="block text-xs font-medium text-gray-700 mb-1">Categoría</label>
           <Select
             options={opcionesCategorias}
-            value={filtros.categoria?.toString() || ''}
-            onChange={(e) => onFiltrosChange({ categoria: e.target.value ? parseInt(e.target.value) : undefined })}
+            value={filtrosLocales.categoria?.toString() || ''}
+            onChange={(e) => handleFiltroLocalChange('categoria', e.target.value ? parseInt(e.target.value) : undefined)}
             className="h-9 text-sm"
           />
         </div>
@@ -208,29 +261,36 @@ export function GastosFiltros({
           <label className="block text-xs font-medium text-gray-700 mb-1">Fuente</label>
           <Select
             options={opcionesFuentes}
-            value={filtros.fuente || ''}
-            onChange={(e) => onFiltrosChange({ fuente: e.target.value })}
+            value={filtrosLocales.fuente || ''}
+            onChange={(e) => handleFiltroLocalChange('fuente', e.target.value)}
             className="h-9 text-sm"
           />
         </div>
+
+        {/* Botones Aplicar y Limpiar Filtros */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={aplicarFiltros}
+            className="h-9 px-4 bg-teal-600 hover:bg-teal-700 text-white text-sm"
+            title="Aplicar todos los filtros"
+          >
+            Aplicar Filtros
+          </Button>
+          
+          {hayFiltrosActivos && (
+            <Button 
+              variant="outline" 
+              onClick={limpiarTodosLosFiltros} 
+              className="h-9 px-3 text-sm"
+              title="Limpiar todos los filtros"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Limpiar Filtros
+            </Button>
+          )}
+        </div>
         </div>
       </div>
-
-      {/* Botón limpiar filtros */}
-      {hayFiltrosActivos && (
-        <div className="flex justify-start">
-          <Button 
-            variant="outline" 
-            onClick={onLimpiarFiltros} 
-            size="sm"
-            className="h-8 px-3 text-xs"
-            title="Limpiar todos los filtros"
-          >
-            <X className="w-3 h-3 mr-1" />
-            Limpiar Filtros
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
-﻿import { useState } from "react"
+import { useState } from "react"
 import { Button } from "../components/ui/button"
 import { Plus, RefreshCw } from "lucide-react"
 import FormularioIngreso from "../components/forms/FormularioIngreso"
 import IngresosStats from "../components/ingresos/IngresosStats"
 import { IngresosTabla } from "../components/ingresos/IngresosTabla"
+import ModalEliminarIngreso from "../components/ingresos/ModalEliminarIngreso"
 import { useIngresos } from "../hooks/useIngresos"
 
 function IngresosPage() {
@@ -14,12 +15,13 @@ function IngresosPage() {
     error,
     totalIngresos,
     setFiltros,
-    refrescarIngresos,
-    eliminarIngreso
+    refrescarIngresos
   } = useIngresos();
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [ingresoEditar, setIngresoEditar] = useState<any>(null);
+  const [ingresoAEliminar, setIngresoAEliminar] = useState<any>(null);
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
 
   const handleEditarIngreso = (ingreso: any) => {
     setIngresoEditar(ingreso);
@@ -28,8 +30,21 @@ function IngresosPage() {
     console.log('Editar ingreso:', ingreso, 'Estado actual:', ingresoEditar);
   };
 
-  const handleEliminarIngreso = async (id: number) => {
-    await eliminarIngreso(id);
+  const abrirModalEliminar = (ingreso: any) => {
+    setIngresoAEliminar(ingreso);
+    setMostrarModalEliminar(true);
+  };
+
+  const cerrarModalEliminar = () => {
+    setIngresoAEliminar(null);
+    setMostrarModalEliminar(false);
+  };
+
+  const confirmarEliminarIngreso = async () => {
+    // El modal maneja la eliminación internamente
+    // Solo necesitamos refrescar los datos y cerrar el modal
+    refrescarIngresos();
+    cerrarModalEliminar();
   };
 
   const cerrarFormulario = () => {
@@ -106,7 +121,7 @@ function IngresosPage() {
           ingresos={ingresos}
           isLoading={isLoading}
           onEditarIngreso={handleEditarIngreso}
-          onEliminarIngreso={handleEliminarIngreso}
+          onEliminarIngreso={abrirModalEliminar}
           filtrosActivos={filtros}
           onFiltrosChange={setFiltros}
         />
@@ -117,6 +132,15 @@ function IngresosPage() {
         <FormularioIngreso
           onClose={cerrarFormulario}
           onIngresoCreado={handleIngresoCreado}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {mostrarModalEliminar && ingresoAEliminar && (
+        <ModalEliminarIngreso
+          ingreso={ingresoAEliminar}
+          onClose={cerrarModalEliminar}
+          onConfirm={confirmarEliminarIngreso}
         />
       )}
     </div>
