@@ -21,6 +21,7 @@ export default function ChatPage() {
   } = useChat();
 
   const [inputMensaje, setInputMensaje] = useState('');
+  const [contextoGastos, setContextoGastos] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +33,7 @@ export default function ChatPage() {
   const handleEnviar = async () => {
     if (!inputMensaje.trim() || isTyping) return;
     
-    await enviarMensaje(inputMensaje);
+    await enviarMensaje(inputMensaje, contextoGastos);
     setInputMensaje('');
   };
 
@@ -85,11 +86,11 @@ export default function ChatPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2">
-            {isLoading && (!conversaciones || conversaciones.length === 0) ? (
+            {isLoading && conversaciones.length === 0 ? (
               <div className="flex items-center justify-center h-32">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
               </div>
-            ) : !conversaciones || conversaciones.length === 0 ? (
+            ) : conversaciones.length === 0 ? (
               <div className="text-center text-gray-500 text-sm mt-8">
                 No hay conversaciones aún
               </div>
@@ -114,13 +115,9 @@ export default function ChatPage() {
                       </p>
                     </div>
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        try {
-                          await eliminarConversacion(conv.id);
-                        } catch (error) {
-                          console.error('Error al eliminar conversación:', error);
-                        }
+                        eliminarConversacion(conv.id);
                       }}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
                     >
@@ -158,11 +155,21 @@ export default function ChatPage() {
                 </div>
               </div>
             </div>
+            
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={contextoGastos}
+                onChange={(e) => setContextoGastos(e.target.checked)}
+                className="rounded cursor-pointer"
+              />
+              <span className="text-gray-600">Incluir contexto de gastos</span>
+            </label>
           </div>
 
           {/* Área de mensajes */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {!mensajes || mensajes.length === 0 ? (
+            {mensajes.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Bot className="w-16 h-16 text-gray-300 mb-4" />
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">

@@ -10,3 +10,4 @@ passlib[argon2]==1.7.4
 python-multipart==0.0.6
 gunicorn==21.2.0
 pydantic[email]
+httpx==0.25.0
