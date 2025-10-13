@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
-import { ingresosService, categoriasService, type IngresoCreate, type Categoria } from '../../services/api';
+import { ingresosService, categoriasService, type IngresoCreate, type Categoria, type Ingreso } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 interface FormularioIngresoProps {
   onClose: () => void;
   onIngresoCreado: () => void;
+  ingreso?: Ingreso; // Prop opcional para edición
 }
 
-const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngresoCreado }) => {
+const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngresoCreado, ingreso }) => {
   const [loading, setLoading] = useState(false);
   const [loadingDatos, setLoadingDatos] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +35,24 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
   useEffect(() => {
     cargarDatos();
   }, [user]);
+
+  // Nuevo useEffect para cargar datos del ingreso en modo edición
+  useEffect(() => {
+    if (ingreso) {
+      setFormData({
+        descripcion: ingreso.descripcion,
+        monto: ingreso.monto,
+        fecha: ingreso.fecha,
+        fuente: ingreso.fuente || 'manual',
+        tipo: ingreso.tipo || 'salario',
+        recurrente: ingreso.recurrente || false,
+        frecuencia: ingreso.frecuencia || 'unica',
+        id_categoria: ingreso.id_categoria,
+        notas: ingreso.notas || '',
+        moneda: ingreso.moneda || 'ARS'
+      });
+    }
+  }, [ingreso]);
 
   const cargarDatos = async () => {
     if (!user) return;
@@ -111,13 +130,20 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
         id_categoria: formData.id_categoria || undefined
       };
 
-      await ingresosService.createIngreso(datosEnvio);
+      if (ingreso) {
+        // Modo edición - actualizar ingreso existente
+        await ingresosService.updateIngreso(ingreso.id_ingreso, datosEnvio);
+      } else {
+        // Modo creación - crear nuevo ingreso
+        await ingresosService.createIngreso(datosEnvio);
+      }
+      
       onIngresoCreado();
     } catch (error: any) {
-      console.error('Error al crear ingreso:', error);
+      console.error(`Error al ${ingreso ? 'actualizar' : 'crear'} ingreso:`, error);
       setError(
         error.response?.data?.detail || 
-        'Ocurrió un error al crear el ingreso. Revisa los datos e inténtalo de nuevo.'
+        `Ocurrió un error al ${ingreso ? 'actualizar' : 'crear'} el ingreso. Revisa los datos e inténtalo de nuevo.`
       );
     } finally {
       setLoading(false);
@@ -151,7 +177,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               <DollarSign className="h-6 w-6 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Nuevo Ingreso
+              {ingreso ? 'Editar Ingreso' : 'Nuevo Ingreso'}
             </h3>
           </div>
           <button
@@ -270,7 +296,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -280,7 +306,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  <span>Crear Ingreso</span>
+                  <span>{ingreso ? 'Actualizar Ingreso' : 'Crear Ingreso'}</span>
                 </>
               )}
             </button>

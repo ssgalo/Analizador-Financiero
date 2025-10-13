@@ -88,6 +88,11 @@ const AuthPage: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
+        {/* Título principal de la aplicación - movido más arriba */}
+        <h1 className="text-center text-4xl font-bold text-black mb-24">
+          Analizador Financiero
+        </h1>
+        
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             {isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta'}

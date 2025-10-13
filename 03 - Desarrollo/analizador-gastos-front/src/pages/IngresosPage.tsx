@@ -86,18 +86,7 @@ function IngresosPage() {
             onClick={() => {
               setMostrarFormulario(true);
             }}
-            style={{ backgroundColor: '#14b8a6', color: 'white' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#0f766e';
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#14b8a6';
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            className="transition-all duration-300 ease-in-out"
+            className="bg-teal-600 hover:bg-teal-700 text-white transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Ingreso
@@ -132,6 +121,7 @@ function IngresosPage() {
         <FormularioIngreso
           onClose={cerrarFormulario}
           onIngresoCreado={handleIngresoCreado}
+          ingreso={ingresoEditar}
         />
       )}
 

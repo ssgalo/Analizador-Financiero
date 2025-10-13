@@ -28,24 +28,15 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     cargarDatos();
   }, [user]);
 
-  // Sincronizar el estado local con los filtros activos del padre (solo cuando se limpian externamente)
+  // Sincronizar el estado local con los filtros activos del padre
   useEffect(() => {
-    // Solo resetear si todos los filtros están vacíos (cuando se limpian externamente)
-    const todosFiltrosVacios = !filtrosActivos.categoria && 
-                               !filtrosActivos.fecha_desde && 
-                               !filtrosActivos.fecha_hasta && 
-                               !filtrosActivos.monto_desde && 
-                               !filtrosActivos.monto_hasta &&
-                               !filtrosActivos.busqueda;
-    
-    if (todosFiltrosVacios) {
-      setCategoriaLocal('');
-      setFechaDesdeLocal('');
-      setFechaHastaLocal('');
-      setMontoMinLocal('');
-      setMontoMaxLocal('');
-      setTextoBusqueda('');
-    }
+    // Sincronizar siempre los valores de los filtros activos con los campos locales
+    setCategoriaLocal(filtrosActivos.categoria?.toString() || '');
+    setFechaDesdeLocal(filtrosActivos.fecha_desde || '');
+    setFechaHastaLocal(filtrosActivos.fecha_hasta || '');
+    setMontoMinLocal(filtrosActivos.monto_desde?.toString() || '');
+    setMontoMaxLocal(filtrosActivos.monto_hasta?.toString() || '');
+    setTextoBusqueda(filtrosActivos.busqueda || '');
   }, [filtrosActivos]);
 
   const cargarDatos = async () => {
@@ -216,7 +207,7 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
           </div>
           <Button
             onClick={realizarBusqueda}
-            className="h-10 px-4 bg-teal-500 hover:bg-teal-600 text-white"
+            className="h-10 px-4 bg-teal-600 hover:bg-teal-700 text-white"
             title="Buscar"
           >
             <Search className="h-4 w-4" />
@@ -330,7 +321,7 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
         <div className="flex justify-end gap-3 mt-4">
           <Button
             onClick={aplicarFiltros}
-            className="bg-teal-500 hover:bg-teal-600 text-white"
+            className="bg-teal-600 hover:bg-teal-700 text-white"
           >
             Aplicar filtros
           </Button>

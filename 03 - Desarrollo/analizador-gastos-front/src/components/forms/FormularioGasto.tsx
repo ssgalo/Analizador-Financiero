@@ -46,7 +46,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
   gastoEditar,
   isLoading = false
 }) => {
-  const { colors, getHoverStyles } = useColors()
+  const { getHoverStyles } = useColors()
   // ✅ Obtener usuario desde Zustand
   const { user } = useAuthStore();
   
@@ -318,11 +318,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
           <Button
             type="submit"
             disabled={isSubmitting || isLoading}
-            style={{
-              backgroundColor: colors.primary,
-              color: 'white'
-            }}
-            {...getHoverStyles('primary')}
+            className="bg-teal-600 hover:bg-teal-700 text-white transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

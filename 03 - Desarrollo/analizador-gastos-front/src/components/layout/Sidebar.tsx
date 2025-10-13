@@ -34,7 +34,6 @@ const Sidebar: React.FC = () => {
     { path: '/reportes', label: 'Reportes', icon: BarChart3 },
     { path: '/objetivos', label: 'Objetivos', icon: Target },
     { path: '/integraciones', label: 'Integraciones', icon: LinkIcon },
-    { path: '/configuracion', label: 'Configuración', icon: Settings },
   ];
 
   return (
@@ -90,7 +89,7 @@ const Sidebar: React.FC = () => {
         </nav>
 
         {/* Botón Acerca de */}
-        <div className="absolute bottom-20 left-6 right-6">
+        <div className="absolute bottom-32 left-6 right-6">
           <Link
             to="/acerca-de"
             className={`
@@ -103,6 +102,23 @@ const Sidebar: React.FC = () => {
           >
             <Info className="w-5 h-5" />
             <span>Acerca de</span>
+          </Link>
+        </div>
+
+        {/* Botón Configuración */}
+        <div className="absolute bottom-20 left-6 right-6">
+          <Link
+            to="/configuracion"
+            className={`
+              w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
+              ${location.pathname === '/configuracion'
+                ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }
+            `}
+          >
+            <Settings className="w-5 h-5" />
+            <span>Configuración</span>
           </Link>
         </div>
 

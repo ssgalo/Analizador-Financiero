@@ -54,7 +54,7 @@ const AcercaDePage: React.FC = () => {
             <div className="space-y-3">
               {integrantes.map((nombre, index) => (
                 <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white font-semibold">
                     {nombre.split(' ').map(n => n.charAt(0)).join('')}
                   </div>
                   <span className="text-gray-900 font-medium">{nombre}</span>

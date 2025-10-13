@@ -43,25 +43,18 @@ export function GastosFiltros({
     fuente: ''
   });
 
-  // Solo sincronizar cuando los filtros se vacían completamente (limpieza)
+  // Sincronizar el estado local con los filtros activos
   useEffect(() => {
-    const estaVacio = !filtros.fecha_desde && !filtros.fecha_hasta && 
-                      !filtros.categoria && !filtros.fuente && 
-                      !filtros.monto_desde && !filtros.monto_hasta && 
-                      !filtros.busqueda;
-    
-    if (estaVacio) {
-      setMontoDesde('');
-      setMontoHasta('');
-      setTextoBusqueda('');
-      setFiltrosLocales({
-        fecha_desde: '',
-        fecha_hasta: '',
-        categoria: undefined,
-        fuente: ''
-      });
-    }
-    // NO resetear los valores de monto si hay filtros activos
+    // Sincronizar siempre los valores de los filtros activos con los campos locales
+    setMontoDesde(filtros.monto_desde?.toString() || '');
+    setMontoHasta(filtros.monto_hasta?.toString() || '');
+    setTextoBusqueda(filtros.busqueda || '');
+    setFiltrosLocales({
+      fecha_desde: filtros.fecha_desde || '',
+      fecha_hasta: filtros.fecha_hasta || '',
+      categoria: filtros.categoria,
+      fuente: filtros.fuente || ''
+    });
   }, [filtros]);
 
   const opcionesCategorias = [
@@ -266,9 +259,10 @@ export function GastosFiltros({
             className="h-9 text-sm"
           />
         </div>
+        </div>
 
-        {/* Botones Aplicar y Limpiar Filtros */}
-        <div className="flex gap-2">
+        {/* Botones Aplicar y Limpiar Filtros - Fuera del grid */}
+        <div className="flex gap-2 mt-4">
           <Button 
             onClick={aplicarFiltros}
             className="h-9 px-4 bg-teal-600 hover:bg-teal-700 text-white text-sm"
@@ -288,7 +282,6 @@ export function GastosFiltros({
               Limpiar Filtros
             </Button>
           )}
-        </div>
         </div>
       </div>
     </div>
