@@ -1,8 +1,24 @@
 import { chromium, request as playwrightRequest } from '@playwright/test';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Cargar variables de entorno desde .env.test
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env.test') });
 
 async function generateStorageState() {
-  const email = 'nicom2@mail.com';
-  const password = 'NicoM1234#';
+  const email = process.env.TEST_USER_EMAIL;
+  const password = process.env.TEST_USER_PASSWORD;
+
+  if (!email || !password) {
+    console.error('\n⚠️  ERROR: Credenciales no configuradas.');
+    console.error('Por favor, configura el archivo .env.test con:');
+    console.error('  TEST_USER_EMAIL=tu_email@mail.com');
+    console.error('  TEST_USER_PASSWORD=TuPassword123#\n');
+    process.exit(1);
+  }
   
   const loginUrls = [
     'http://localhost:8000/api/v1/auth/login',

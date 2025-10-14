@@ -31,7 +31,7 @@ test.describe('Dashboard E2E Tests', () => {
 
     test('DASH-005: debe mostrar el nombre o email del usuario', async ({ page }) => {
       const email = process.env.TEST_USER_EMAIL!;
-      const emailPart = email.split('@')[0]; // Extrae "nicom2" de "nicom2@mail.com"
+      const emailPart = email.split('@')[0]; 
       
       const userElement = page.getByText(new RegExp(`${email}|${emailPart}|usuario`, 'i'));
       await expect(userElement.first()).toBeVisible({ timeout: 10000 });

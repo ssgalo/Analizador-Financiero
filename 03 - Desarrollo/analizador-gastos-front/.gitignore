@@ -37,4 +37,5 @@ dist-ssr
 test-results/
 playwright-report/
 playwright/.cache/
-storageState.json
+tests/storageState.json
+**/storageState.json
