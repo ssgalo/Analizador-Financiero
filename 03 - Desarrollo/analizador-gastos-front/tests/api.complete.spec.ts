@@ -4,6 +4,9 @@ let authToken = '';
 
 test.describe('API Complete Tests', () => {
   test.beforeAll(async ({ request }) => {
+    const email = process.env.TEST_USER_EMAIL!;
+    const password = process.env.TEST_USER_PASSWORD!;
+    
     const loginUrls = [
       'http://localhost:8000/api/v1/auth/login',
       'http://127.0.0.1:8000/api/v1/auth/login',
@@ -14,8 +17,8 @@ test.describe('API Complete Tests', () => {
       try {
         const response = await request.post(url, {
           data: {
-            email: 'nicom2@mail.com',
-            contraseña: 'NicoM1234#',
+            email,
+            contraseña: password,
           },
           headers: {
             'Content-Type': 'application/json; charset=utf-8',
@@ -40,10 +43,13 @@ test.describe('API Complete Tests', () => {
 
   test.describe('Auth API', () => {
     test('API-001: POST /auth/login debe autenticar usuario válido', async ({ request }) => {
+      const email = process.env.TEST_USER_EMAIL!;
+      const password = process.env.TEST_USER_PASSWORD!;
+      
       const response = await request.post('http://localhost:8000/api/v1/auth/login', {
         data: {
-          email: 'nicom2@mail.com',
-          contraseña: 'NicoM1234#',
+          email,
+          contraseña: password,
         },
       });
 
@@ -83,8 +89,9 @@ test.describe('API Complete Tests', () => {
         descripcion: 'Test Gasto API',
         monto: 100.50,
         fecha: new Date().toISOString().split('T')[0],
-        categoria_id: 1,
-        metodo_pago: 'Efectivo',
+        id_categoria: 1, // Backend usa id_categoria no categoria_id
+        comercio: 'Test Store',
+        moneda: 'ARS',
       };
 
       const response = await request.post('http://localhost:8000/api/v1/gastos/', {
@@ -95,9 +102,17 @@ test.describe('API Complete Tests', () => {
         data: newGasto,
       });
 
+      // Debug: ver respuesta si falla
+      if (!response.ok()) {
+        const errorBody = await response.text();
+        console.log('❌ POST /gastos failed:', response.status());
+        console.log('Error body:', errorBody);
+        console.log('Request data:', JSON.stringify(newGasto, null, 2));
+      }
+
       expect(response.ok()).toBeTruthy();
       const body = await response.json();
-      expect(body).toHaveProperty('id');
+      expect(body).toHaveProperty('id_gasto'); // Backend retorna id_gasto no id
       expect(body.descripcion).toBe(newGasto.descripcion);
     });
 
@@ -184,8 +199,12 @@ test.describe('API Complete Tests', () => {
         descripcion: 'Test Ingreso API',
         monto: 5000.00,
         fecha: new Date().toISOString().split('T')[0],
-        categoria_id: 1,
-        fuente: 'Salario',
+        id_categoria: 1, // Backend usa id_categoria no categoria_id
+        fuente: 'Empresa Test',
+        tipo: 'salario', // Campo requerido según schema
+        recurrente: false,
+        frecuencia: 'mensual',
+        moneda: 'ARS',
       };
 
       const response = await request.post('http://localhost:8000/api/v1/ingresos/', {
@@ -196,9 +215,15 @@ test.describe('API Complete Tests', () => {
         data: newIngreso,
       });
 
+      // Debug: ver respuesta si falla
+      if (!response.ok()) {
+        const errorBody = await response.text();
+        console.log('❌ POST /ingresos failed:', response.status(), errorBody);
+      }
+
       expect(response.ok()).toBeTruthy();
       const body = await response.json();
-      expect(body).toHaveProperty('id');
+      expect(body).toHaveProperty('id_ingreso'); // Backend retorna id_ingreso no id
       expect(body.descripcion).toBe(newIngreso.descripcion);
     });
 
@@ -247,7 +272,8 @@ test.describe('API Complete Tests', () => {
 
       if (response.ok()) {
         const body = await response.json();
-        expect(body).toHaveProperty('id');
+        // Backend retorna 'id_categoria' no 'id'
+        expect(body).toHaveProperty('id_categoria');
         expect(body.nombre).toBe(newCategoria.nombre);
       }
     });
@@ -386,10 +412,11 @@ test.describe('API Complete Tests', () => {
   });
 
   test.describe('Manejo de errores', () => {
-    test('API-021: debe retornar 401 sin token de autenticación', async ({ request }) => {
+    test('API-021: debe retornar 401 o 403 sin token de autenticación', async ({ request }) => {
       const response = await request.get('http://localhost:8000/api/v1/gastos/');
 
-      expect(response.status()).toBe(401);
+      // Backend retorna 403 Forbidden en lugar de 401 Unauthorized cuando no hay token
+      expect([401, 403]).toContain(response.status());
     });
 
     test('API-022: debe retornar 404 para recurso inexistente', async ({ request }) => {

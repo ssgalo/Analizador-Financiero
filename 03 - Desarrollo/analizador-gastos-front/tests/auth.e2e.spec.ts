@@ -73,21 +73,14 @@ test.describe('Authentication E2E Tests', () => {
   });
 
   test('AUTH-007: debe redirigir al dashboard después de login exitoso', async ({ page }) => {
-    await page.getByPlaceholder('tu@email.com').fill('nicom2@mail.com');
-    await page.getByPlaceholder('••••••••').fill('NicoM1234#');
+    const email = process.env.TEST_USER_EMAIL!;
+    const password = process.env.TEST_USER_PASSWORD!;
+    
+    await page.getByPlaceholder('tu@email.com').fill(email);
+    await page.getByPlaceholder('••••••••').fill(password);
     await page.getByRole('button', { name: /iniciar sesión/i }).click();
     
     await page.waitForURL(/\//, { timeout: 15000 });
-    await expect(page).toHaveURL('/');
-  });
-
-  test('AUTH-008: debe mantener la sesión después de refrescar', async ({ page }) => {
-    await page.getByPlaceholder('tu@email.com').fill('nicom2@mail.com');
-    await page.getByPlaceholder('••••••••').fill('NicoM1234#');
-    await page.getByRole('button', { name: /iniciar sesión/i }).click();
-    
-    await page.waitForURL(/\//, { timeout: 15000 });
-    await page.reload();
     await expect(page).toHaveURL('/');
   });
 
@@ -107,5 +100,29 @@ test.describe('Authentication E2E Tests', () => {
     } else {
       console.log('Forgot password link not found - feature may not be implemented');
     }
+  });
+});
+
+// Test separado para persistencia de sesión (usa la sesión pre-autenticada del global-setup)
+test.describe('Session Persistence', () => {
+  test('AUTH-008: debe mantener la sesión después de refrescar', async ({ page }) => {
+    // Este test usa el storageState del global-setup, por lo que ya está autenticado
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    
+    // Verificar que estamos en home (autenticados)
+    await expect(page).toHaveURL('/');
+    
+    // Verificar que el store persiste en localStorage
+    const authStore = await page.evaluate(() => localStorage.getItem('auth-store'));
+    expect(authStore).toBeTruthy();
+    
+    // Recargar página SIN limpiar localStorage
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    
+    // Verificar que la sesión se mantiene
+    await expect(page).toHaveURL('/', { timeout: 10000 });
+    await expect(page).not.toHaveURL('/auth');
   });
 });

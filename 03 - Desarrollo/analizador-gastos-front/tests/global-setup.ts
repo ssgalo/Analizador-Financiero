@@ -1,9 +1,30 @@
 ﻿/// <reference types="node" />
 import { request as playwrightRequest, chromium } from '@playwright/test';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Cargar variables de entorno
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env.test') });
 
 async function globalSetup() {
-  const email = process.env.TEST_USER_EMAIL || 'nicom2@mail.com';
-  const password = process.env.TEST_USER_PASSWORD || 'NicoM1234#';
+  const email = process.env.TEST_USER_EMAIL;
+  const password = process.env.TEST_USER_PASSWORD;
+
+  if (!email || !password) {
+    throw new Error(
+      '\n⚠️  ERROR: Credenciales de prueba no configuradas.\n\n' +
+      '📝 Por favor, sigue estos pasos:\n' +
+      '1. Copia el archivo ".env.test.example" y renómbralo a ".env.test"\n' +
+      '2. Edita ".env.test" y configura tus credenciales:\n' +
+      '   TEST_USER_EMAIL=tu_email@ejemplo.com\n' +
+      '   TEST_USER_PASSWORD=TuContraseña123#\n\n' +
+      '3. Asegúrate de que el usuario exista en la base de datos\n' +
+      '4. Vuelve a ejecutar los tests\n'
+    );
+  }
 
   const loginUrls = [
     process.env.TEST_API_URL || 'http://localhost:8000/api/v1/auth/login',

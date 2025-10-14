@@ -52,7 +52,8 @@ test.describe('Unit Tests - Utilidades y Formatters', () => {
       await page.goto('/');
       
       const result = await page.evaluate(() => {
-        const date = new Date('2024-01-15');
+        // Usar fecha con hora para evitar problemas de zona horaria
+        const date = new Date('2024-01-15T12:00:00');
         return date.toLocaleDateString('es-AR');
       });
       

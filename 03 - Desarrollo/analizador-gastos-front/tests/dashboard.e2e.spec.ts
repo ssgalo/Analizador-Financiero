@@ -9,7 +9,8 @@ test.describe('Dashboard E2E Tests', () => {
   test.describe('Navegación y estructura', () => {
     test('DASH-001: debe cargar el dashboard correctamente', async ({ page }) => {
       await expect(page).toHaveTitle(/Analizador|Dashboard|Home|Gastos/i);
-      await expect(page.getByRole('heading', { name: /dashboard|inicio|home|resumen/i }).first()).toBeVisible();
+      // El Home.tsx tiene un h2 con saludo como "¡Hola, Nico!" o similar
+      await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible();
     });
 
     test('DASH-002: debe mostrar el menú de navegación', async ({ page }) => {
@@ -29,7 +30,10 @@ test.describe('Dashboard E2E Tests', () => {
     });
 
     test('DASH-005: debe mostrar el nombre o email del usuario', async ({ page }) => {
-      const userElement = page.getByText(/nicom2@mail.com|nico|usuario/i);
+      const email = process.env.TEST_USER_EMAIL!;
+      const emailPart = email.split('@')[0]; // Extrae "nicom2" de "nicom2@mail.com"
+      
+      const userElement = page.getByText(new RegExp(`${email}|${emailPart}|usuario`, 'i'));
       await expect(userElement.first()).toBeVisible({ timeout: 10000 });
     });
 
@@ -42,15 +46,18 @@ test.describe('Dashboard E2E Tests', () => {
 
   test.describe('Resumen financiero', () => {
     test('DASH-007: debe mostrar tarjeta de total de ingresos', async ({ page }) => {
-      await expect(page.getByText(/total.*ingresos|ingresos.*totales/i).first()).toBeVisible();
+      // Texto exacto del componente Home.tsx: "Ingresos del Mes"
+      await expect(page.getByText(/ingresos del mes/i)).toBeVisible();
     });
 
     test('DASH-008: debe mostrar tarjeta de total de gastos', async ({ page }) => {
-      await expect(page.getByText(/total.*gastos|gastos.*totales/i).first()).toBeVisible();
+      // Texto exacto del componente Home.tsx: "Gastos del Mes"
+      await expect(page.getByText(/gastos del mes/i)).toBeVisible();
     });
 
     test('DASH-009: debe mostrar tarjeta de balance o saldo', async ({ page }) => {
-      await expect(page.getByText(/balance|saldo|disponible/i).first()).toBeVisible();
+      // En Home.tsx es "Ahorro del Mes" no "Balance"
+      await expect(page.getByText(/ahorro del mes/i)).toBeVisible();
     });
 
     test('DASH-010: debe mostrar valores numéricos en las tarjetas', async ({ page }) => {
@@ -179,7 +186,8 @@ test.describe('Dashboard E2E Tests', () => {
   test.describe('Responsive y accesibilidad', () => {
     test('DASH-026: debe ser responsive en móvil', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await expect(page.getByRole('heading', { name: /dashboard|inicio|home|resumen/i }).first()).toBeVisible();
+      // Verificar que al menos una de las tarjetas es visible en móvil
+      await expect(page.getByText(/gastos del mes|ingresos del mes/i).first()).toBeVisible();
     });
 
     test('DASH-027: debe tener elementos accesibles con roles ARIA', async ({ page }) => {

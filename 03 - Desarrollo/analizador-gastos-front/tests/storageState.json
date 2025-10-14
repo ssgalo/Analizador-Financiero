@@ -6,7 +6,7 @@
       "localStorage": [
         {
           "name": "auth_token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJuaWNvbTJAbWFpbC5jb20iLCJ1c2VyX2lkIjo4LCJleHAiOjE3NjA0MTg5NjB9.QGCgrLdb_EQzLmhyZXQsxUKy9KOaPLh-Sek1J3L3Ud0"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJuaWNvbTJAbWFpbC5jb20iLCJ1c2VyX2lkIjo4LCJleHAiOjE3NjA0NDg3NzJ9.WJ2yYU1J7BbKn-OWcdaZHTcLQ1lJzKfOQVhtQr6mLgE"
         },
         {
           "name": "user_info",
@@ -14,7 +14,7 @@
         },
         {
           "name": "auth-store",
-          "value": "{\"state\":{\"user\":{\"id_usuario\":8,\"nombre\":\"nicom2\",\"email\":\"nicom2@mail.com\",\"usuario\":\"nicom2\",\"estado\":\"activo\"},\"isAuthenticated\":true,\"isLoading\":false,\"tokenExpiry\":1760418961652,\"sessionExpired\":false},\"version\":0}"
+          "value": "{\"state\":{\"user\":{\"id_usuario\":8,\"nombre\":\"nicom2\",\"email\":\"nicom2@mail.com\",\"usuario\":\"nicom2\",\"estado\":\"activo\"},\"isAuthenticated\":true,\"isLoading\":false,\"tokenExpiry\":1760448773750,\"sessionExpired\":false},\"version\":0}"
         }
       ]
     }
