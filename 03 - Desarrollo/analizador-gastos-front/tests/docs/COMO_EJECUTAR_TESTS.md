@@ -499,5 +499,12 @@ Ahora ya sabes cómo ejecutar los tests del sistema. Recuerda:
 
 ---
 
+## 📚 Documentación Relacionada
+
+- **[TESTS_IMPLEMENTADOS.md](./TESTS_IMPLEMENTADOS.md)** - Lista completa de todos los 103 tests con descripciones detalladas
+- **[EVOLUCION_TESTS.md](./EVOLUCION_TESTS.md)** - Cómo evolucionó el suite desde 83.9% hasta 100% de aprobación
+
+---
+
 **Guía creada:** Octubre 2025  
-**Última actualización:** Suite completo de 90 tests funcionales ✅
+**Última actualización:** Suite completo de 103 tests funcionales ✅
