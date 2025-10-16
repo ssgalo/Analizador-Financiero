@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { LoginRequest, RegisterRequest } from '../services/api';
+import logoApp from '../assets/logoAPP.png';
 
 const AuthPage: React.FC = () => {
-  const { login, register, isAuthenticated, isLoading } = useAuthStore();
+  const { login, register, isAuthenticated, isLoading, clearSessionExpired } = useAuthStore();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -17,6 +18,11 @@ const AuthPage: React.FC = () => {
 
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
+
+  // Limpiar sessionExpired cuando se monta el componente
+  useEffect(() => {
+    clearSessionExpired();
+  }, [clearSessionExpired]);
 
   // Si ya está autenticado, redirigir
   if (isAuthenticated) {
@@ -86,18 +92,30 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        {/* Título principal de la aplicación - movido más arriba */}
-        <h1 className="text-center text-4xl font-bold text-black mb-24">
-          Analizador Financiero
-        </h1>
+        {/* Logo y título principal de la aplicación */}
+        <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <img 
+              src={logoApp} 
+              alt="Logo Analizador Financiero" 
+              className="w-40 h-40 object-contain"
+            />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Analizador Financiero
+          </h1>
+          <p className="text-gray-600 text-sm">
+            Organizar tus finanzas nunca fue tan fácil
+          </p>
+        </div>
         
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta'}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-6">
             {isLoginMode ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
             <button
               type="button"
@@ -109,7 +127,7 @@ const AuthPage: React.FC = () => {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             {!isLoginMode && (
               <>

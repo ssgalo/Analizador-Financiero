@@ -60,7 +60,8 @@ export const useAuthStore = create<AuthState>()(
           get().setupTokenExpiryWarning(authResponse.expires_in);
           
         } catch (error: any) {
-          set({ isLoading: false });
+          // Limpiar sessionExpired también en caso de error
+          set({ isLoading: false, sessionExpired: false });
           
           // Manejar errores específicos del backend
           if (error.response?.status === 422) {
@@ -107,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Acción: Registro
       register: async (userData: RegisterRequest) => {
-        set({ isLoading: true });
+        set({ isLoading: true, sessionExpired: false });
         
         try {
           await authService.register(userData);
@@ -119,7 +120,8 @@ export const useAuthStore = create<AuthState>()(
           });
           
         } catch (error: any) {
-          set({ isLoading: false });
+          // Limpiar sessionExpired también en caso de error
+          set({ isLoading: false, sessionExpired: false });
           
           // Manejar errores específicos del backend
           if (error.response?.status === 422) {

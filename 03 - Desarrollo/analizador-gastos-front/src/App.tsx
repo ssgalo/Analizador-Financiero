@@ -17,6 +17,7 @@ import ChatPage from './pages/ChatPage';
 import ImportarPage from './pages/ImportarPage';
 import IntegracionesPage from './pages/IntegracionesPage';
 import AcercaDePage from './pages/AcercaDePage';
+import MasOpcionesPage from './pages/MasOpcionesPage';
 
 // Estilos
 import './App.css';
@@ -96,6 +97,14 @@ const App: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <IntegracionesPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/mas-opciones" element={
+            <ProtectedRoute>
+              <Layout>
+                <MasOpcionesPage />
               </Layout>
             </ProtectedRoute>
           } />

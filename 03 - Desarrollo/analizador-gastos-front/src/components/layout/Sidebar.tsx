@@ -4,16 +4,15 @@ import {
   Home, 
   CreditCard, 
   TrendingUp, 
-  Target, 
-  BarChart3, 
   MessageSquare, 
   Upload, 
   Link as LinkIcon, 
   Settings, 
   LogOut,
-  Info
+  LayoutGrid
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import logoApp from '../../assets/logoAPP.png';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -31,9 +30,8 @@ const Sidebar: React.FC = () => {
     { path: '/ingresos', label: 'Ingresos', icon: TrendingUp },
     { path: '/chat', label: 'Chat IA', icon: MessageSquare },
     { path: '/importar', label: 'Importar', icon: Upload },
-    { path: '/reportes', label: 'Reportes', icon: BarChart3 },
-    { path: '/objetivos', label: 'Objetivos', icon: Target },
     { path: '/integraciones', label: 'Integraciones', icon: LinkIcon },
+    { path: '/mas-opciones', label: 'Más Opciones', icon: LayoutGrid },
   ];
 
   return (
@@ -41,9 +39,16 @@ const Sidebar: React.FC = () => {
       <div className="p-6">
         {/* Logo/Título de la aplicación */}
         <div className="mb-8">
-          <h1 className="text-xl font-bold text-gray-800">
-            Analizador Financiero
-          </h1>
+          <div className="flex items-center space-x-3">
+            <img 
+              src={logoApp} 
+              alt="Logo Analizador Financiero" 
+              className="w-10 h-10 object-contain"
+            />
+            <h1 className="text-xl font-bold text-gray-800">
+              Analizador Financiero
+            </h1>
+          </div>
         </div>
 
         {/* Información del usuario */}
@@ -87,23 +92,6 @@ const Sidebar: React.FC = () => {
             );
           })}
         </nav>
-
-        {/* Botón Acerca de */}
-        <div className="absolute bottom-32 left-6 right-6">
-          <Link
-            to="/acerca-de"
-            className={`
-              w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
-              ${location.pathname === '/acerca-de'
-                ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }
-            `}
-          >
-            <Info className="w-5 h-5" />
-            <span>Acerca de</span>
-          </Link>
-        </div>
 
         {/* Botón Configuración */}
         <div className="absolute bottom-20 left-6 right-6">

@@ -23,11 +23,14 @@ const SessionExpiredNotification: React.FC = () => {
     };
   }, []);
 
-  // Mostrar notificación cuando sessionExpired sea true
+  // Mostrar/ocultar notificación cuando sessionExpired cambie
   useEffect(() => {
     if (sessionExpired) {
       setMessage('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
       setShow(true);
+    } else {
+      // Si sessionExpired se limpia, ocultar el popup
+      setShow(false);
     }
   }, [sessionExpired]);
 
