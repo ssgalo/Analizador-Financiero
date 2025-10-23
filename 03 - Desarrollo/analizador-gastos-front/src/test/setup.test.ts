@@ -1,5 +1,3 @@
-import { describe, test, expect } from 'vitest';
-
 /**
  * Tests básicos para validar que el entorno de testing está configurado correctamente
  */

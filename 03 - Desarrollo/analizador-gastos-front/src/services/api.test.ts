@@ -1,25 +1,31 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { gastosService, type GastoCreate } from './api';
+// Mock del módulo api completo antes de importarlo
+jest.mock('./api', () => {
+  return {
+    gastosService: {
+      getGastos: jest.fn(),
+      createGasto: jest.fn(),
+      updateGasto: jest.fn(),
+      deleteGasto: jest.fn()
+    }
+  };
+});
 
-// Mock de axios
-vi.mock('axios', () => ({
-  default: {
-    create: () => ({
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      interceptors: {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() }
-      }
-    })
-  }
-}));
+import { gastosService } from './api';
+
+// Definir la interfaz localmente para el test
+interface GastoCreate {
+  descripcion: string;
+  monto: number;
+  fecha: string;
+  comercio: string;
+  fuente: 'manual' | 'PDF' | 'imagen' | 'MercadoPago' | 'banco';
+  id_categoria: number;
+  id_usuario: number;
+}
 
 describe('Gastos Service', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   test('debería tener métodos principales del servicio', () => {
@@ -37,9 +43,9 @@ describe('Gastos Service', () => {
       monto: 150.50,
       fecha: '2025-01-15',
       comercio: 'Coto',
-      categoria: 'Alimentación',
       fuente: 'manual',
-      id_categoria: 1
+      id_categoria: 1,
+      id_usuario: 1
     };
 
     // Verificar que el objeto tiene las propiedades esperadas

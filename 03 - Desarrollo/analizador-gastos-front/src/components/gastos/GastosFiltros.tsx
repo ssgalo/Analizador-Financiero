@@ -43,9 +43,10 @@ export function GastosFiltros({
     fuente: ''
   });
 
-  // Sincronizar el estado local con los filtros activos
+  // Sincronizar el estado local con los filtros activos SOLO en montaje inicial
+  // No sincronizar en cada cambio para evitar que se sobrescriban las selecciones del usuario
   useEffect(() => {
-    // Sincronizar siempre los valores de los filtros activos con los campos locales
+    // Sincronizar valores iniciales de los filtros activos con los campos locales
     setMontoDesde(filtros.monto_desde?.toString() || '');
     setMontoHasta(filtros.monto_hasta?.toString() || '');
     setTextoBusqueda(filtros.busqueda || '');
@@ -55,7 +56,8 @@ export function GastosFiltros({
       categoria: filtros.categoria,
       fuente: filtros.fuente || ''
     });
-  }, [filtros]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar al montar el componente
 
   const opcionesCategorias = [
     { value: '', label: 'Todas las categorías' },

@@ -1,3 +1,15 @@
+/**
+ * Página de Gestión de Ingresos
+ * 
+ * Permite al usuario:
+ * - Ver todos sus ingresos en formato tabla
+ * - Filtrar ingresos por categoría, fecha, tipo
+ * - Crear nuevos ingresos
+ * - Editar ingresos existentes
+ * - Eliminar ingresos con confirmación
+ * - Ver estadísticas resumidas de ingresos
+ */
+
 import { useState } from "react"
 import { Button } from "../components/ui/button"
 import { Plus, RefreshCw } from "lucide-react"
@@ -8,6 +20,7 @@ import ModalEliminarIngreso from "../components/ingresos/ModalEliminarIngreso"
 import { useIngresos } from "../hooks/useIngresos"
 
 function IngresosPage() {
+  // Hook personalizado para gestión de ingresos
   const {
     ingresos,
     filtros,
@@ -18,11 +31,16 @@ function IngresosPage() {
     refrescarIngresos
   } = useIngresos();
 
+  // Estados locales para gestión de modales y formularios
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [ingresoEditar, setIngresoEditar] = useState<any>(null);
   const [ingresoAEliminar, setIngresoAEliminar] = useState<any>(null);
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
 
+  /**
+   * Abre el formulario en modo edición
+   * @param ingreso - Ingreso a editar
+   */
   const handleEditarIngreso = (ingreso: any) => {
     setIngresoEditar(ingreso);
     setMostrarFormulario(true);
@@ -30,16 +48,27 @@ function IngresosPage() {
     console.log('Editar ingreso:', ingreso, 'Estado actual:', ingresoEditar);
   };
 
+  /**
+   * Abre el modal de confirmación de eliminación
+   * @param ingreso - Ingreso a eliminar
+   */
   const abrirModalEliminar = (ingreso: any) => {
     setIngresoAEliminar(ingreso);
     setMostrarModalEliminar(true);
   };
 
+  /**
+   * Cierra el modal de eliminación
+   */
   const cerrarModalEliminar = () => {
     setIngresoAEliminar(null);
     setMostrarModalEliminar(false);
   };
 
+  /**
+   * Confirma la eliminación y refresca los datos
+   * La eliminación real se maneja dentro del modal
+   */
   const confirmarEliminarIngreso = async () => {
     // El modal maneja la eliminación internamente
     // Solo necesitamos refrescar los datos y cerrar el modal
@@ -47,16 +76,24 @@ function IngresosPage() {
     cerrarModalEliminar();
   };
 
+  /**
+   * Cierra el formulario y resetea el estado de edición
+   */
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
     setIngresoEditar(null);
   };
 
+  /**
+   * Handler ejecutado tras la creación exitosa de un ingreso
+   * Refresca los datos y cierra el formulario
+   */
   const handleIngresoCreado = () => {
     refrescarIngresos();
     cerrarFormulario();
   };
 
+  // Mostrar estado de error si hay problemas al cargar
   if (error) {
     return (
       <div className="p-6 bg-background min-h-full flex items-center justify-center">
@@ -74,7 +111,7 @@ function IngresosPage() {
   return (
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Cabecera de la Página */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Mis Ingresos</h1>

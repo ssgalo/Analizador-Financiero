@@ -1,3 +1,15 @@
+/**
+ * Página de Gestión de Gastos
+ * 
+ * Permite al usuario:
+ * - Ver todos sus gastos en formato tabla
+ * - Filtrar gastos por categoría, fecha, monto
+ * - Crear nuevos gastos
+ * - Editar gastos existentes
+ * - Eliminar gastos con confirmación
+ * - Ver estadísticas resumidas
+ */
+
 import { useState } from "react"
 import { Button } from "../components/ui/button"
 import { Plus, RefreshCw } from "lucide-react"
@@ -9,6 +21,7 @@ import { useGastos } from "../hooks/useGastos"
 import type { Gasto, GastoCreate, GastoUpdate } from "../services/api"
 
 function GastosPage() {
+  // Hook personalizado para gestión de gastos
   const {
     gastos,
     categorias,
@@ -24,23 +37,35 @@ function GastosPage() {
     actualizarGasto
   } = useGastos();
 
+  // Estados locales para gestión de modales y formularios
   const [gastoAEliminar, setGastoAEliminar] = useState<Gasto | null>(null);
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [gastoEditar, setGastoEditar] = useState<Gasto | null>(null);
 
+  /**
+   * Abre el modal de confirmación de eliminación
+   * @param gasto - Gasto que se desea eliminar
+   */
   const abrirModalEliminar = (gasto: Gasto) => {
     setGastoAEliminar(gasto);
     setMostrarModalEliminar(true);
   };
 
+  /**
+   * Cierra el modal de eliminación y resetea estados
+   */
   const cerrarModalEliminar = () => {
     setGastoAEliminar(null);
     setMostrarModalEliminar(false);
     setEliminando(false);
   };
 
+  /**
+   * Ejecuta la eliminación del gasto
+   * Muestra loading state y maneja errores
+   */
   const confirmarEliminarGasto = async () => {
     if (!gastoAEliminar) return;
     
@@ -54,24 +79,41 @@ function GastosPage() {
     }
   };
 
+  /**
+   * Handler para crear un nuevo gasto
+   * @param gastoData - Datos del gasto a crear
+   */
   const handleCrearGasto = async (gastoData: GastoCreate) => {
     await crearGasto(gastoData);
   };
 
+  /**
+   * Handler para actualizar un gasto existente
+   * @param id - ID del gasto a actualizar
+   * @param gastoData - Datos actualizados del gasto
+   */
   const handleActualizarGasto = async (id: number, gastoData: GastoUpdate) => {
     await actualizarGasto(id, gastoData);
   };
 
+  /**
+   * Abre el formulario en modo edición con los datos del gasto
+   * @param gasto - Gasto a editar
+   */
   const handleEditarGasto = (gasto: Gasto) => {
     setGastoEditar(gasto);
     setMostrarFormulario(true);
   };
 
+  /**
+   * Cierra el formulario y resetea el estado de edición
+   */
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
     setGastoEditar(null);
   };
 
+  // Mostrar estado de error si hay problemas al cargar
   if (error) {
     return (
       <div className="p-6 bg-background min-h-full flex items-center justify-center">
@@ -89,7 +131,7 @@ function GastosPage() {
   return (
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Cabecera de la Página */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Mis Gastos</h1>

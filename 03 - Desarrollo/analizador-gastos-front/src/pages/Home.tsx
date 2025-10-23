@@ -1,3 +1,13 @@
+/**
+ * Página principal del Dashboard
+ * 
+ * Muestra un resumen completo de la situación financiera del usuario:
+ * - Métricas clave (gastos, ingresos, ahorro)
+ * - Tendencia mensual con gráficos
+ * - Distribución de gastos por categoría
+ * - Acciones rápidas para gestionar finanzas
+ */
+
 import React from 'react';
 import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
@@ -13,20 +23,13 @@ import {
   Upload,
   Target,
   Wallet,
-  ShoppingCart,
-  Home as HomeIcon,
-  Car,
-  Coffee,
-  Smartphone,
-  Heart,
-  Book,
-  Wifi,
   RefreshCw,
   Loader2
 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { useDashboard } from "../hooks/useDashboard"
 import { formatCurrency } from "../utils/formatters"
+import { getCategoryIcon } from "../utils/categoryHelpers"
 import { useAuthStore } from '../stores/authStore';
 
 const Home: React.FC = () => {
@@ -39,6 +42,7 @@ const Home: React.FC = () => {
     refreshData 
   } = useDashboard();
 
+  // Estado de carga
   if (isLoading) {
     return (
       <div className="p-6 bg-background min-h-full flex items-center justify-center">
@@ -50,6 +54,7 @@ const Home: React.FC = () => {
     );
   }
 
+  // Estado de error
   if (error) {
     return (
       <div className="p-6 bg-background min-h-full flex items-center justify-center">
@@ -64,6 +69,7 @@ const Home: React.FC = () => {
     );
   }
 
+  // Calcular métricas principales
   const totalGastos = estadisticas?.totalGastos || 0;
   const totalIngresos = estadisticas?.totalIngresos || 0;
   const ahorro = totalIngresos - totalGastos;
@@ -72,7 +78,7 @@ const Home: React.FC = () => {
   return (
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-7xl mx-auto">
-        {/* Welcome Section */}
+        {/* Sección de Bienvenida */}
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-2">
@@ -86,7 +92,7 @@ const Home: React.FC = () => {
           </Button>
         </div>
 
-        {/* Key Metrics */}
+        {/* Tarjetas de Métricas Clave */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -150,9 +156,9 @@ const Home: React.FC = () => {
           </Card>
         </div>
 
-        {/* Charts Section */}
+        {/* Sección de Gráficos y Visualizaciones */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Monthly Trend */}
+          {/* Gráfico de Tendencia Mensual */}
           <Card>
             <CardHeader>
               <CardTitle>Tendencia Mensual</CardTitle>
@@ -185,7 +191,7 @@ const Home: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Category Breakdown */}
+          {/* Desglose por Categorías */}
           <Card>
             <CardHeader>
               <CardTitle>Gastos por Categoría</CardTitle>
@@ -196,33 +202,8 @@ const Home: React.FC = () => {
                 {estadisticas?.gastosPorCategoria && estadisticas.gastosPorCategoria.length > 0 ? (
                   estadisticas.gastosPorCategoria.map((category, index) => {
                     const percentage = totalGastos > 0 ? (category.total / totalGastos) * 100 : 0;
-                    // Mapeo simple de iconos basado en el nombre de la categoría
-                    let IconComponent = ShoppingCart; // icono por defecto
-                    switch (category.categoria.toLowerCase()) {
-                      case 'alimentación':
-                      case 'alimentacion':
-                        IconComponent = Coffee;
-                        break;
-                      case 'transporte':
-                        IconComponent = Car;
-                        break;
-                      case 'vivienda':
-                        IconComponent = HomeIcon;
-                        break;
-                      case 'entretenimiento':
-                        IconComponent = Smartphone;
-                        break;
-                      case 'salud':
-                        IconComponent = Heart;
-                        break;
-                      case 'educación':
-                      case 'educacion':
-                        IconComponent = Book;
-                        break;
-                      case 'servicios':
-                        IconComponent = Wifi;
-                        break;
-                    }
+                    // Obtener el ícono apropiado para la categoría usando la utilidad
+                    const IconComponent = getCategoryIcon(category.categoria);
                     
                     return (
                       <div key={index} className="flex items-center justify-between">

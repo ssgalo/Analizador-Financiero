@@ -1,6 +1,18 @@
 # ============================================================================
 # API ENDPOINTS PARA CHAT CON IA
 # ============================================================================
+"""
+Módulo de rutas para el chatbot con IA
+
+Proporciona endpoints para:
+- Enviar mensajes al chatbot y recibir respuestas
+- Gestionar conversaciones del usuario
+- Integración con Azure OpenAI Service
+
+El chatbot analiza los datos financieros del usuario (gastos, ingresos, categorías)
+y proporciona recomendaciones personalizadas usando GPT-4.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -27,12 +39,35 @@ from app.models.categoria import Categoria
 
 router = APIRouter()
 
-# Almacenamiento temporal de conversaciones
+# Almacenamiento temporal de conversaciones en memoria
+# TODO: Migrar a base de datos para persistencia
 conversaciones = {}
 
 
 def obtener_contexto_gastos(user_id: int, db: Session) -> str:
-    """Obtiene contexto con datos reales e históricos del usuario"""
+    """
+    Genera el contexto financiero del usuario para el chatbot
+    
+    Analiza los datos de gastos del usuario y crea un resumen que incluye:
+    - Último mes con datos registrados
+    - Gastos del mes actual
+    - Últimos 10 gastos
+    - Top 5 categorías del mes
+    
+    Args:
+        user_id: ID del usuario autenticado
+        db: Sesión de base de datos SQLAlchemy
+        
+    Returns:
+        str: Contexto formateado con información financiera del usuario
+        
+    Example:
+        >>> contexto = obtener_contexto_gastos(123, db)
+        >>> print(contexto)
+        📅 ÚLTIMO MES CON DATOS REGISTRADOS: 10/2025
+        💰 MES ACTUAL (10/2025):
+           Total gastado: $15,234.50 (42 transacciones)
+    """
     try:
         hoy = date.today()
         mes_actual = hoy.month

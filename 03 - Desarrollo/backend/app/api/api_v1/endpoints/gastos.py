@@ -1,3 +1,14 @@
+"""
+Endpoints de API para gestión de gastos
+
+Este módulo proporciona endpoints REST para:
+- Crear nuevos gastos
+- Listar gastos con filtros (usuario, categoría, moneda, fecha)
+- Obtener estadísticas de gastos
+- Actualizar gastos existentes
+- Eliminar gastos
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
@@ -20,7 +31,31 @@ def create_gasto(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """
-    Crear un nuevo gasto.
+    Crear un nuevo gasto
+    
+    Crea un gasto asociado al usuario autenticado. Valida que la moneda
+    especificada exista y esté activa en el sistema.
+    
+    Args:
+        gasto_in: Datos del gasto a crear (monto, fecha, categoría, etc.)
+        db: Sesión de base de datos SQLAlchemy
+        current_user: Usuario autenticado actual
+        
+    Returns:
+        GastoResponse: Gasto creado con todos sus datos
+        
+    Raises:
+        HTTPException 400: Si la moneda no es válida o está inactiva
+        
+    Example:
+        POST /api/v1/gastos/
+        {
+            "monto": 150.50,
+            "descripcion": "Supermercado",
+            "fecha": "2025-10-22",
+            "id_categoria": 1,
+            "moneda": "ARS"
+        }
     """
     # Validar que la moneda existe y está activa
     moneda = db.query(Moneda).filter(
@@ -33,20 +68,20 @@ def create_gasto(
             detail=f"Moneda '{gasto_in.moneda}' no válida o inactiva"
         )
     
-    # ✅ Crear gasto con el usuario logueado
+    # Crear gasto asociado al usuario autenticado
     gasto_data = gasto_in.dict()
     gasto_data["id_usuario"] = current_user.id_usuario
     
-    # ✅ Asegurar que estado tenga un valor por defecto
+    # Establecer estado por defecto si no se proporciona
     if "estado" not in gasto_data or gasto_data["estado"] is None:
         gasto_data["estado"] = "confirmado"
     
     db_gasto = Gasto(**gasto_data)
     db.add(db_gasto)
     db.commit()
-    db.refresh(db_gasto)  # ✅ Refresca para obtener valores generados por la BD
+    db.refresh(db_gasto)  # Refrescar para obtener valores generados por la BD
     
-    # Expirar relaciones para evitar que se carguen automáticamente
+    # Expirar relaciones para evitar carga automática innecesaria
     db.expire(db_gasto, ['categoria', 'usuario'])
     
     return db_gasto
@@ -61,9 +96,31 @@ def read_gastos(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
-    #Agrego para que filtre por el usuario logueado
+    """
+    Listar gastos del usuario autenticado
+    
+    Obtiene todos los gastos del usuario con opciones de filtrado por
+    categoría, moneda y paginación.
+    
+    Args:
+        skip: Número de registros a omitir (para paginación)
+        limit: Número máximo de registros a retornar
+        usuario_id: ID de usuario para filtrar (solo admin)
+        categoria_id: Filtrar por categoría específica
+        moneda: Código de moneda para filtrar (ej: 'ARS', 'USD')
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        List[GastoResponse]: Lista de gastos ordenados por fecha descendente
+        
+    Example:
+        GET /api/v1/gastos/?categoria_id=1&limit=50
+    """
+    # Filtrar por el usuario autenticado
     query = db.query(Gasto).filter(Gasto.id_usuario == current_user.id_usuario)
     
+    # Aplicar filtros adicionales si se proporcionan
     if usuario_id:
         query = query.filter(Gasto.id_usuario == usuario_id)
     if categoria_id:
@@ -71,6 +128,7 @@ def read_gastos(
     if moneda:
         query = query.filter(Gasto.moneda == moneda.upper())
     
+    # Ordenar por ID descendente y aplicar paginación
     gastos = query.order_by(Gasto.id_gasto.desc()).offset(skip).limit(limit).all()
     return gastos
 
@@ -82,8 +140,34 @@ def get_gasto_stats(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """
-    Obtener estadísticas de gastos del usuario.
+    Obtener estadísticas de gastos del usuario
+    
+    Calcula métricas agregadas de los gastos confirmados del usuario:
+    - Total gastado
+    - Cantidad de gastos
+    - Promedio por gasto
+    - Gasto máximo y mínimo
+    
+    Args:
+        año: Año específico para filtrar estadísticas
+        mes: Mes específico (1-12) para filtrar estadísticas
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        GastoStats: Objeto con todas las estadísticas calculadas
+        
+    Example:
+        GET /api/v1/gastos/stats?año=2025&mes=10
+        {
+            "total": 15234.50,
+            "cantidad": 42,
+            "promedio": 362.72,
+            "maximo": 2500.00,
+            "minimo": 25.50
+        }
     """
+    # Filtrar gastos confirmados del usuario
     query = db.query(Gasto).filter(
         Gasto.id_usuario == current_user.id_usuario,
         Gasto.estado == "confirmado"

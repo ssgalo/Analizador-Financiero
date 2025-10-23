@@ -1,7 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ingresosService, categoriasService, authService } from '../services/api';
 import type { Ingreso, Categoria } from '../services/api';
+import { CATEGORIAS_INGRESOS, obtenerCategoriasFaltantes } from '../utils/categoryHelpers';
 
+/**
+ * Interfaz para los filtros de ingresos
+ */
 interface FiltrosIngresos {
   fecha_desde?: string;
   fecha_hasta?: string;
@@ -12,6 +16,9 @@ interface FiltrosIngresos {
   busqueda?: string;
 }
 
+/**
+ * Interfaz de retorno del hook useIngresos
+ */
 interface UseIngresosReturn {
   ingresos: Ingreso[];
   categorias: Categoria[];
@@ -27,6 +34,9 @@ interface UseIngresosReturn {
   actualizarIngreso: (id: number, datos: any) => Promise<Ingreso | null>;
 }
 
+/**
+ * Estado inicial de los filtros de ingresos
+ */
 const filtrosIniciales: FiltrosIngresos = {
   fecha_desde: '',
   fecha_hasta: '',
@@ -37,6 +47,20 @@ const filtrosIniciales: FiltrosIngresos = {
   monto_hasta: undefined
 };
 
+/**
+ * Hook personalizado para gestionar ingresos
+ * 
+ * Proporciona funcionalidades para:
+ * - Cargar y filtrar ingresos del usuario autenticado
+ * - Gestionar categorías de ingresos
+ * - Crear, actualizar y eliminar ingresos
+ * - Calcular totales
+ * 
+ * @returns {UseIngresosReturn} Objeto con ingresos, categorías, métodos CRUD y estado de carga
+ * 
+ * @example
+ * const { ingresos, categorias, totalIngresos, crearIngreso } = useIngresos();
+ */
 export const useIngresos = (): UseIngresosReturn => {
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -44,46 +68,42 @@ export const useIngresos = (): UseIngresosReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para asegurar que existan las categorías básicas para ingresos
+  /**
+   * Asegura que existan las categorías básicas de ingresos
+   * Crea las categorías faltantes si no existen en la base de datos
+   * 
+   * @param categoriasExistentes - Array de categorías ya existentes
+   * @returns Array de categorías recién creadas
+   */
   const asegurarCategoriasIngresos = useCallback(async (categoriasExistentes: Categoria[]) => {
-    const categoriasIngresos = [
-      { nombre: 'Salario', descripcion: 'Ingresos por salario', color: '#3b82f6', icono: '💼' },
-      { nombre: 'Freelance', descripcion: 'Trabajos independientes', color: '#8b5cf6', icono: '💻' },
-      { nombre: 'Inversiones', descripcion: 'Rendimientos de inversiones', color: '#10b981', icono: '📈' },
-      { nombre: 'Ventas', descripcion: 'Ingresos por ventas', color: '#f59e0b', icono: '🛍️' },
-      { nombre: 'Regalos', descripcion: 'Dinero recibido como regalo', color: '#ef4444', icono: '🎁' },
-      { nombre: 'Regalos/Bonos', descripcion: 'Bonificaciones y regalos', color: '#ec4899', icono: '🎉' },
-      { nombre: 'Otros Ingresos', descripcion: 'Otros tipos de ingresos', color: '#6b7280', icono: '💰' }
-    ];
-
+    // Obtener las categorías faltantes usando la utilidad
+    const categoriasFaltantes = obtenerCategoriasFaltantes(categoriasExistentes, CATEGORIAS_INGRESOS);
     const categoriasCreadas: Categoria[] = [];
 
-    for (const categoriaInfo of categoriasIngresos) {
-      // Verificar si la categoría ya existe
-      const categoriaExiste = categoriasExistentes.some(cat => 
-        cat.nombre.toLowerCase() === categoriaInfo.nombre.toLowerCase()
-      );
-
-      if (!categoriaExiste) {
-        try {
-          console.log(`🏷️ Creando categoría de ingreso: ${categoriaInfo.nombre}`);
-          const nuevaCategoria = await categoriasService.createCategoria({
-            nombre: categoriaInfo.nombre,
-            descripcion: categoriaInfo.descripcion,
-            es_personalizada: false,
-            color: categoriaInfo.color,
-            icono: categoriaInfo.icono
-          });
-          categoriasCreadas.push(nuevaCategoria);
-        } catch (err) {
-          console.warn(`⚠️ No se pudo crear la categoría de ingreso ${categoriaInfo.nombre}:`, err);
-        }
+    // Crear cada categoría faltante
+    for (const categoriaInfo of categoriasFaltantes) {
+      try {
+        console.log(`🏷️ Creando categoría de ingreso: ${categoriaInfo.nombre}`);
+        const nuevaCategoria = await categoriasService.createCategoria({
+          nombre: categoriaInfo.nombre,
+          descripcion: categoriaInfo.descripcion,
+          es_personalizada: false,
+          color: categoriaInfo.color,
+          icono: categoriaInfo.icono
+        });
+        categoriasCreadas.push(nuevaCategoria);
+      } catch (err) {
+        console.warn(`⚠️ No se pudo crear la categoría de ingreso ${categoriaInfo.nombre}:`, err);
       }
     }
 
     return categoriasCreadas;
   }, []);
 
+  /**
+   * Carga los datos de ingresos y categorías desde la API
+   * Aplica filtros del usuario si están definidos
+   */
   const cargarDatos = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -161,6 +181,13 @@ export const useIngresos = (): UseIngresosReturn => {
           ingreso.descripcion.toLowerCase().includes(termino) ||
           (ingreso.fuente && ingreso.fuente.toLowerCase().includes(termino)) ||
           ingreso.categoria?.nombre.toLowerCase().includes(termino)
+        );
+      }
+
+      // Filtrar por categoría
+      if (filtros.categoria !== undefined && filtros.categoria !== null) {
+        ingresosFiltrados = ingresosFiltrados.filter((ingreso: Ingreso) => 
+          ingreso.id_categoria === filtros.categoria
         );
       }
 

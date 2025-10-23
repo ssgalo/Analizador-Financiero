@@ -28,16 +28,23 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     cargarDatos();
   }, [user]);
 
-  // Sincronizar el estado local con los filtros activos del padre
+  // Sincronizar el estado local con los filtros activos del padre SOLO en montaje inicial
+  // No sincronizar en cada cambio para evitar que se sobrescriban las selecciones del usuario
   useEffect(() => {
-    // Sincronizar siempre los valores de los filtros activos con los campos locales
-    setCategoriaLocal(filtrosActivos.categoria?.toString() || '');
+    // Sincronizar valores iniciales de los filtros activos con los campos locales
+    // Para categoria, si es undefined o null, usar cadena vacía
+    const categoriaValue = filtrosActivos.categoria !== undefined && filtrosActivos.categoria !== null 
+      ? filtrosActivos.categoria.toString() 
+      : '';
+    
+    setCategoriaLocal(categoriaValue);
     setFechaDesdeLocal(filtrosActivos.fecha_desde || '');
     setFechaHastaLocal(filtrosActivos.fecha_hasta || '');
     setMontoMinLocal(filtrosActivos.monto_desde?.toString() || '');
     setMontoMaxLocal(filtrosActivos.monto_hasta?.toString() || '');
     setTextoBusqueda(filtrosActivos.busqueda || '');
-  }, [filtrosActivos]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar al montar el componente
 
   const cargarDatos = async () => {
     if (!user) return;
@@ -74,8 +81,11 @@ const IngresosFiltros: React.FC<IngresosFiltrosProps> = ({ onFiltrosChange, filt
     const filtrosParaHook: any = {};
     
     // Mapear categoria_id a categoria para que el hook lo entienda
+    // Si categoriaLocal está vacío, explícitamente enviar undefined para limpiar el filtro
     if (categoriaLocal) {
       filtrosParaHook.categoria = parseInt(categoriaLocal);
+    } else {
+      filtrosParaHook.categoria = undefined;
     }
     
     // Mapear los otros campos

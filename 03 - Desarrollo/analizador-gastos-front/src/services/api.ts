@@ -1,11 +1,30 @@
+/**
+ * Servicio de API para el Analizador Financiero
+ * 
+ * Proporciona cliente configurado de Axios y servicios para:
+ * - Autenticación (login, registro, sesiones)
+ * - Gastos (CRUD completo)
+ * - Ingresos (CRUD completo)
+ * - Categorías (gestión de categorías)
+ * - Chat (integración con Azure OpenAI)
+ * 
+ * Incluye interceptores para:
+ * - Agregar automáticamente tokens JWT a las peticiones
+ * - Manejar expiración de sesiones
+ */
+
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 
-// Configuración base de la API
+// Configuración base de la API desde variables de entorno
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
 
-// Crear instancia de axios
+/**
+ * Cliente configurado de Axios para todas las peticiones API
+ * Base URL: /api/v1
+ * Timeout: 10 segundos
+ */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: `${API_BASE_URL}/api/${API_VERSION}`,
   headers: {
@@ -14,7 +33,10 @@ export const apiClient: AxiosInstance = axios.create({
   timeout: 10000, // 10 segundos
 });
 
-// Interceptor para agregar token JWT automáticamente
+/**
+ * Interceptor de peticiones
+ * Agrega automáticamente el token JWT a los headers de autorización
+ */
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(import.meta.env.VITE_TOKEN_KEY || 'auth_token');

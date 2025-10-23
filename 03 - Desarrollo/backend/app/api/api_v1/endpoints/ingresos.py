@@ -1,3 +1,14 @@
+"""
+Endpoints de API para gestión de ingresos
+
+Este módulo proporciona endpoints REST para:
+- Crear nuevos ingresos
+- Listar ingresos con filtros (categoría, tipo, fecha, estado)
+- Obtener estadísticas de ingresos
+- Actualizar ingresos existentes
+- Eliminar ingresos
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
@@ -20,7 +31,31 @@ def create_ingreso(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """
-    Crear un nuevo ingreso.
+    Crear un nuevo ingreso
+    
+    Crea un ingreso asociado al usuario autenticado. Valida que la moneda
+    y la categoría (si se proporciona) existan y estén activas.
+    
+    Args:
+        ingreso_in: Datos del ingreso a crear (monto, fecha, categoría, etc.)
+        db: Sesión de base de datos SQLAlchemy
+        current_user: Usuario autenticado actual
+        
+    Returns:
+        IngresoResponse: Ingreso creado con todos sus datos
+        
+    Raises:
+        HTTPException 400: Si la moneda o categoría no son válidas
+        
+    Example:
+        POST /api/v1/ingresos/
+        {
+            "monto": 50000.00,
+            "descripcion": "Salario mensual",
+            "fecha": "2025-10-01",
+            "id_categoria": 5,
+            "moneda": "ARS"
+        }
     """
     # Validar que la moneda existe y está activa
     moneda = db.query(Moneda).filter(
@@ -45,11 +80,11 @@ def create_ingreso(
                 detail="Categoría no válida o inactiva"
             )
     
-    # Crear ingreso con el usuario logueado
+    # Crear ingreso asociado al usuario autenticado
     ingreso_data = ingreso_in.dict()
     ingreso_data["id_usuario"] = current_user.id_usuario
     
-    # Asegurar que estado tenga un valor por defecto
+    # Establecer estado por defecto si no se proporciona
     if "estado" not in ingreso_data or ingreso_data["estado"] is None:
         ingreso_data["estado"] = "confirmado"
     
@@ -58,7 +93,7 @@ def create_ingreso(
     db.commit()
     db.refresh(db_ingreso)
     
-    # Expirar relaciones para evitar que se carguen automáticamente
+    # Expirar relaciones para evitar carga automática innecesaria
     db.expire(db_ingreso, ['categoria', 'usuario'])
     
     return db_ingreso
@@ -76,8 +111,29 @@ def read_ingresos(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """
-    Obtener ingresos del usuario actual con filtros opcionales.
+    Listar ingresos del usuario autenticado
+    
+    Obtiene todos los ingresos del usuario con múltiples opciones de filtrado:
+    categoría, tipo, estado, rango de fechas y paginación.
+    
+    Args:
+        skip: Número de registros a omitir (para paginación)
+        limit: Número máximo de registros a retornar (máx: 1000)
+        categoria_id: Filtrar por categoría específica
+        tipo: Filtrar por tipo de ingreso (ej: 'Salario', 'Freelance')
+        estado: Filtrar por estado ('confirmado', 'pendiente', 'cancelado')
+        fecha_desde: Fecha inicial del rango (formato: YYYY-MM-DD)
+        fecha_hasta: Fecha final del rango (formato: YYYY-MM-DD)
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        List[IngresoWithCategoria]: Lista de ingresos con sus categorías
+        
+    Example:
+        GET /api/v1/ingresos/?fecha_desde=2025-10-01&fecha_hasta=2025-10-31
     """
+    # Filtrar por el usuario autenticado
     query = db.query(Ingreso).filter(Ingreso.id_usuario == current_user.id_usuario)
     
     # Aplicar filtros

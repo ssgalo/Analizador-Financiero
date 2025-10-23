@@ -1,6 +1,6 @@
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { GastosFiltros } from './GastosFiltros';
 import type { Categoria } from '../../services/api';
 
@@ -28,13 +28,13 @@ const mockCategorias: Categoria[] = [
 const mockProps = {
   filtros: {},
   categorias: mockCategorias,
-  onFiltrosChange: vi.fn(),
-  onLimpiarFiltros: vi.fn()
+  onFiltrosChange: jest.fn(),
+  onLimpiarFiltros: jest.fn()
 };
 
 describe('GastosFiltros Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   test('debería renderizar todos los campos de filtro', () => {
@@ -107,8 +107,6 @@ describe('GastosFiltros Component', () => {
   test('debería mostrar las categorías en el selector', () => {
     render(<GastosFiltros {...mockProps} />);
 
-    const categorySelect = screen.getByLabelText(/categoría/i);
-    
     // Verificar que las opciones de categoría estén presentes
     expect(screen.getByText('Todas las categorías')).toBeInTheDocument();
     expect(screen.getByText('Alimentación')).toBeInTheDocument();

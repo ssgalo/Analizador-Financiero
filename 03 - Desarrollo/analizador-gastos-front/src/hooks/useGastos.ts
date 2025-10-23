@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { gastosService, categoriasService, authService } from '../services/api';
 import type { Gasto, Categoria } from '../services/api';
+import { CATEGORIAS_GASTOS, filtrarCategorias, obtenerCategoriasFaltantes } from '../utils/categoryHelpers';
+import { getRangoMesActual } from '../utils/dateHelpers';
 
+/**
+ * Interfaz para los filtros de gastos
+ */
 interface FiltrosGastos {
   fecha_desde?: string;
   fecha_hasta?: string;
@@ -12,6 +17,9 @@ interface FiltrosGastos {
   monto_hasta?: number;
 }
 
+/**
+ * Interfaz de retorno del hook useGastos
+ */
 interface UseGastosReturn {
   gastos: Gasto[];
   categorias: Categoria[];
@@ -27,6 +35,9 @@ interface UseGastosReturn {
   actualizarGasto: (id: number, datos: any) => Promise<Gasto | null>;
 }
 
+/**
+ * Estado inicial de los filtros de gastos
+ */
 const filtrosIniciales: FiltrosGastos = {
   fecha_desde: '',
   fecha_hasta: '',
@@ -37,6 +48,20 @@ const filtrosIniciales: FiltrosGastos = {
   monto_hasta: undefined
 };
 
+/**
+ * Hook personalizado para gestionar gastos
+ * 
+ * Proporciona funcionalidades para:
+ * - Cargar y filtrar gastos del usuario autenticado
+ * - Gestionar categorías de gastos
+ * - Crear, actualizar y eliminar gastos
+ * - Calcular totales y estadísticas
+ * 
+ * @returns {UseGastosReturn} Objeto con gastos, categorías, métodos CRUD y estado de carga
+ * 
+ * @example
+ * const { gastos, categorias, totalGastos, crearGasto } = useGastos();
+ */
 export const useGastos = (): UseGastosReturn => {
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -44,46 +69,42 @@ export const useGastos = (): UseGastosReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para asegurar que existan las categorías básicas
+  /**
+   * Asegura que existan las categorías básicas de gastos
+   * Crea las categorías faltantes si no existen en la base de datos
+   * 
+   * @param categoriasExistentes - Array de categorías ya existentes
+   * @returns Array de categorías recién creadas
+   */
   const asegurarCategoriasBasicas = useCallback(async (categoriasExistentes: Categoria[]) => {
-    const categoriasRequeridas = [
-      { nombre: 'Otros', descripcion: 'Otros gastos', color: '#6b7280', icono: '📦' },
-      { nombre: 'Comida', descripcion: 'Gastos en alimentación', color: '#f59e0b', icono: '🍽️' },
-      { nombre: 'Supermercado', descripcion: 'Compras en supermercado', color: '#22c55e', icono: '🛒' },
-      { nombre: 'Entretenimiento', descripcion: 'Gastos en entretenimiento', color: '#ec4899', icono: '🎮' },
-      { nombre: 'Vivienda', descripcion: 'Gastos relacionados con vivienda', color: '#3b82f6', icono: '🏠' },
-      { nombre: 'Transporte', descripcion: 'Gastos de transporte', color: '#ef4444', icono: '🚗' },
-      { nombre: 'Suscripciones y membresías', descripcion: 'Suscripciones y membresías', color: '#8b5cf6', icono: '📱' }
-    ];
-
+    // Obtener las categorías faltantes usando la utilidad
+    const categoriasFaltantes = obtenerCategoriasFaltantes(categoriasExistentes, CATEGORIAS_GASTOS);
     const categoriasCreadas: Categoria[] = [];
 
-    for (const categoriaInfo of categoriasRequeridas) {
-      // Verificar si la categoría ya existe (búsqueda case-insensitive)
-      const categoriaExiste = categoriasExistentes.some(cat => 
-        cat.nombre.toLowerCase().trim() === categoriaInfo.nombre.toLowerCase().trim()
-      );
-
-      if (!categoriaExiste) {
-        try {
-          console.log(`🏷️ Creando categoría de gasto: ${categoriaInfo.nombre}`);
-          const nuevaCategoria = await categoriasService.createCategoria({
-            nombre: categoriaInfo.nombre,
-            descripcion: categoriaInfo.descripcion,
-            es_personalizada: false,
-            color: categoriaInfo.color,
-            icono: categoriaInfo.icono
-          });
-          categoriasCreadas.push(nuevaCategoria);
-        } catch (err) {
-          console.warn(`⚠️ No se pudo crear la categoría ${categoriaInfo.nombre}:`, err);
-        }
+    // Crear cada categoría faltante
+    for (const categoriaInfo of categoriasFaltantes) {
+      try {
+        console.log(`🏷️ Creando categoría de gasto: ${categoriaInfo.nombre}`);
+        const nuevaCategoria = await categoriasService.createCategoria({
+          nombre: categoriaInfo.nombre,
+          descripcion: categoriaInfo.descripcion,
+          es_personalizada: false,
+          color: categoriaInfo.color,
+          icono: categoriaInfo.icono
+        });
+        categoriasCreadas.push(nuevaCategoria);
+      } catch (err) {
+        console.warn(`⚠️ No se pudo crear la categoría ${categoriaInfo.nombre}:`, err);
       }
     }
 
     return categoriasCreadas;
   }, []);
 
+  /**
+   * Carga los datos de gastos y categorías desde la API
+   * Aplica filtros del mes actual y filtros personalizados del usuario
+   */
   const cargarDatos = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -96,43 +117,39 @@ export const useGastos = (): UseGastosReturn => {
         return;
       }
 
-      // Calcular fechas del mes actual
+      // Calcular fechas del mes actual utilizando utilidades
+      const rangoMesActual = getRangoMesActual();
       const fechaActual = new Date();
       const añoActual = fechaActual.getFullYear();
       const mesActual = fechaActual.getMonth() + 1;
-      const primerDiaDelMes = `${añoActual}-${mesActual.toString().padStart(2, '0')}-01`;
-      const ultimoDiaDelMes = new Date(añoActual, mesActual, 0).getDate();
-      const ultimoDelMes = `${añoActual}-${mesActual.toString().padStart(2, '0')}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
-
-      console.log('📅 Debug Fechas - Octubre 2025:', {
+      
+      console.log('📅 Debug Fechas - Mes actual:', {
         fechaActual: fechaActual.toISOString(),
         añoActual,
         mesActual,
-        primerDiaDelMes,
-        ultimoDelMes,
-        ultimoDiaDelMes
+        rangoCalculado: rangoMesActual
       });
-      // Preparar filtros para la API, incluyendo el ID del usuario y fechas del mes actual
+
+      // Preparar filtros para la API
       const filtrosAPI: any = {
         id_usuario: user.id_usuario,
-        fecha_desde: primerDiaDelMes,
-        fecha_hasta: ultimoDelMes,
+        fecha_desde: rangoMesActual.fechaDesde,
+        fecha_hasta: rangoMesActual.fechaHasta,
         limit: 1000 // Límite alto para obtener todos los gastos del mes
       };
 
-      // Aplicar filtros adicionales si existen (pero mantener el filtro del mes actual)
+      // Aplicar filtros adicionales del usuario (sobrescriben el rango del mes si están definidos)
       if (filtros.categoria) {
         filtrosAPI.id_categoria = filtros.categoria;
       }
-      // Solo aplicar filtros de fecha personalizados si están definidos y no son vacíos
-      if (filtros.fecha_desde && filtros.fecha_desde.trim() !== '') {
+      if (filtros.fecha_desde && filtros.fecha_desde.trim()) {
         filtrosAPI.fecha_desde = filtros.fecha_desde;
       }
-      if (filtros.fecha_hasta && filtros.fecha_hasta.trim() !== '') {
+      if (filtros.fecha_hasta && filtros.fecha_hasta.trim()) {
         filtrosAPI.fecha_hasta = filtros.fecha_hasta;
       }
 
-      // Cargar gastos y categorías desde la API real
+      // Cargar gastos y categorías desde la API
       const [gastosData, categoriasData] = await Promise.all([
         gastosService.getGastos(filtrosAPI),
         categoriasService.getCategorias()
@@ -154,31 +171,14 @@ export const useGastos = (): UseGastosReturn => {
       const categoriasCreadas = await asegurarCategoriasBasicas(categoriasData);
       const todasLasCategorias = [...categoriasData, ...categoriasCreadas];
       
-      // Filtrar solo las categorías específicas para gastos (nombres exactos)
-      const categoriasGastosPermitidas = ['Otros', 'Comida', 'Supermercado', 'Entretenimiento', 'Vivienda', 'Transporte', 'Suscripciones y membresías'];
-      const categoriasFiltradas = todasLasCategorias.filter(cat => 
-        categoriasGastosPermitidas.some(nombre => 
-          cat.nombre.toLowerCase().trim() === nombre.toLowerCase().trim()
-        )
-      );
-
-      // Eliminar duplicados basándose en el nombre (mantener el primero)
-      const categoriasSinDuplicados = categoriasFiltradas.filter((cat, index, array) => 
-        array.findIndex(c => c.nombre.toLowerCase().trim() === cat.nombre.toLowerCase().trim()) === index
-      );
+      // Filtrar solo las categorías permitidas para gastos y eliminar duplicados
+      const nombresPermitidos = CATEGORIAS_GASTOS.map(c => c.nombre);
+      const categoriasFiltradas = filtrarCategorias(todasLasCategorias, nombresPermitidos);
       
-      // Debug: verificar los datos que vienen de la API
-      console.log('🔍 Debug - Todas las categorías:', todasLasCategorias.map(c => c.nombre));
-      console.log('🔍 Debug - Categorías filtradas para gastos:', categoriasFiltradas.map(c => c.nombre));
-      console.log('🔍 Debug - Categorías sin duplicados:', categoriasSinDuplicados.map(c => c.nombre));
+      console.log('🔍 Debug - Categorías sin duplicados:', categoriasFiltradas.map(c => c.nombre));
       console.log('🔍 Debug - Datos de gastos desde API:', gastosData);
       console.log('🔍 Debug - Filtros aplicados:', filtros);
       console.log('🔍 Debug - Filtros API enviados:', filtrosAPI);
-      console.log('🔍 Debug - Primer gasto (tipo de monto):', gastosData[0] ? { 
-        monto: gastosData[0].monto, 
-        tipoMonto: typeof gastosData[0].monto,
-        fecha: gastosData[0].fecha
-      } : 'No hay gastos');
       
       // Filtrar solo gastos confirmados
       let gastosFiltrados = gastosData.filter((gasto: Gasto) => gasto.estado === 'confirmado');
@@ -204,6 +204,13 @@ export const useGastos = (): UseGastosReturn => {
                  descripcion.includes(termino) ||
                  categoria.includes(termino);
         });
+      }
+
+      // Filtrar por categoría
+      if (filtros.categoria !== undefined && filtros.categoria !== null) {
+        gastosFiltrados = gastosFiltrados.filter((gasto: Gasto) => 
+          gasto.id_categoria === filtros.categoria
+        );
       }
 
       if (filtros.fuente) {
@@ -238,42 +245,57 @@ export const useGastos = (): UseGastosReturn => {
         });
       }
 
-      // Asegurarse de que cada gasto tenga su categoría completa y monto como número
+      // Asignar categoría completa a cada gasto y normalizar el monto
       const gastosConCategorias = gastosFiltrados.map((gasto: Gasto) => ({
         ...gasto,
         monto: typeof gasto.monto === 'string' ? parseFloat(gasto.monto) : gasto.monto,
-        categoria: categoriasSinDuplicados.find((cat: Categoria) => cat.id_categoria === gasto.id_categoria)
+        categoria: categoriasFiltradas.find((cat: Categoria) => cat.id_categoria === gasto.id_categoria)
       }));
 
       // Ordenar por fecha descendente (más reciente primero)
       const gastosOrdenados = gastosConCategorias.sort((a, b) => {
         const fechaA = new Date(a.fecha).getTime();
         const fechaB = new Date(b.fecha).getTime();
-        return fechaB - fechaA; // Orden descendente
+        return fechaB - fechaA;
       });
 
       setGastos(gastosOrdenados);
-      setCategorias(categoriasSinDuplicados);
+      setCategorias(categoriasFiltradas);
     } catch (err) {
       console.error('Error al cargar gastos:', err);
       setError(err instanceof Error ? err.message : 'Error al conectar con la base de datos');
     } finally {
       setIsLoading(false);
     }
-  }, [filtros]);
+  }, [filtros, asegurarCategoriasBasicas]);
 
+  /**
+   * Actualiza los filtros de gastos
+   * @param nuevos - Filtros parciales a aplicar
+   */
   const setFiltros = useCallback((nuevos: Partial<FiltrosGastos>) => {
     setFiltrosState(prev => ({ ...prev, ...nuevos }));
   }, []);
 
+  /**
+   * Resetea todos los filtros a su estado inicial
+   */
   const limpiarFiltros = useCallback(() => {
     setFiltrosState(filtrosIniciales);
   }, []);
 
+  /**
+   * Recarga manualmente los datos de gastos
+   */
   const refrescarGastos = useCallback(() => {
     cargarDatos();
   }, [cargarDatos]);
 
+  /**
+   * Elimina un gasto por su ID
+   * @param id - ID del gasto a eliminar
+   * @returns Promise<boolean> - true si se eliminó correctamente, false en caso contrario
+   */
   const eliminarGasto = useCallback(async (id: number): Promise<boolean> => {
     try {
       await gastosService.deleteGasto(id);
@@ -285,6 +307,13 @@ export const useGastos = (): UseGastosReturn => {
     }
   }, [cargarDatos]);
 
+  /**
+   * Crea un nuevo gasto
+   * Agrega automáticamente el ID del usuario autenticado
+   * 
+   * @param gastoData - Datos del gasto a crear
+   * @returns Promise<Gasto | null> - Gasto creado o null si hubo error
+   */
   const crearGasto = useCallback(async (gastoData: any): Promise<Gasto | null> => {
     try {
       // Verificar si el usuario está autenticado
@@ -308,6 +337,13 @@ export const useGastos = (): UseGastosReturn => {
     }
   }, [cargarDatos]);
 
+  /**
+   * Actualiza un gasto existente
+   * 
+   * @param id - ID del gasto a actualizar
+   * @param datos - Datos parciales o completos del gasto
+   * @returns Promise<Gasto | null> - Gasto actualizado o null si hubo error
+   */
   const actualizarGasto = useCallback(async (id: number, datos: any): Promise<Gasto | null> => {
     try {
       const gastoActualizado = await gastosService.updateGasto(id, datos);
@@ -319,10 +355,12 @@ export const useGastos = (): UseGastosReturn => {
     }
   }, [cargarDatos]);
 
+  // Cargar datos cuando el hook se monta o cuando cambian los filtros
   useEffect(() => {
     cargarDatos();
   }, [cargarDatos]);
 
+  // Calcular el total de gastos
   const totalGastos = gastos.reduce((total, gasto) => {
     const monto = typeof gasto.monto === 'number' && !isNaN(gasto.monto) ? gasto.monto : 0;
     return total + monto;

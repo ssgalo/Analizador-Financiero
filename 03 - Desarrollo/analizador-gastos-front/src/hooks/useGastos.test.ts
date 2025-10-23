@@ -1,15 +1,14 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useGastos } from './useGastos';
 import * as api from '../services/api';
 
 // Mock del servicio API
-vi.mock('../services/api');
+jest.mock('../services/api');
 const mockedApi = api as any;
 
 describe('useGastos Hook', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   test('debería inicializar con estado vacío', () => {
@@ -75,7 +74,7 @@ describe('useGastos Hook', () => {
     const mockFiltros = {
       fecha_desde: '2025-01-01',
       fecha_hasta: '2025-01-31',
-      categoria: 'Alimentación'
+      categoria: 1
     };
 
     mockedApi.gastosService.getGastos.mockResolvedValue({
