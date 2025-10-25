@@ -53,16 +53,29 @@ const Sidebar: React.FC = () => {
 
         {/* Información del usuario */}
         {user && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div 
+            className="mb-6 p-4 bg-gray-50 rounded-lg"
+            data-testid="user-info-sidebar"
+            aria-label="Información del usuario actual"
+          >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+              <div 
+                className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold"
+                aria-label={`Avatar de ${user.nombre}`}
+              >
                 {user.nombre.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p 
+                  className="text-sm font-medium text-gray-900 truncate"
+                  data-testid="user-nombre"
+                >
                   {user.nombre}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p 
+                  className="text-xs text-gray-500 truncate"
+                  data-testid="user-username"
+                >
                   @{user.usuario}
                 </p>
               </div>
@@ -114,9 +127,11 @@ const Sidebar: React.FC = () => {
         <div className="absolute bottom-6 left-6 right-6">
           <button
             onClick={handleLogout}
+            data-testid="logout-button"
+            aria-label="Cerrar sesión y salir de la aplicación"
             className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5" aria-hidden="true" />
             <span>Cerrar Sesión</span>
           </button>
         </div>

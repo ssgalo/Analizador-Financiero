@@ -204,6 +204,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
                 onChange={(e) => handleInputChange('fecha', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
+                data-testid="ingreso-input-fecha"
               />
             </div>
 
@@ -219,6 +220,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
                 placeholder="0,00"
                 className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
+                data-testid="ingreso-input-monto"
               />
             </div>
           </div>
@@ -236,6 +238,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               placeholder="ej: Sueldo Octubre 2025"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               required
+              data-testid="ingreso-input-descripcion"
             />
           </div>
 
@@ -250,6 +253,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               onChange={(e) => handleInputChange('id_categoria', e.target.value ? parseInt(e.target.value) : undefined)}
               className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               required
+              data-testid="ingreso-input-categoria"
             >
               <option value="">Seleccionar categoría</option>
               {categorias
@@ -273,6 +277,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               placeholder="Observaciones adicionales..."
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              data-testid="ingreso-input-notas"
             />
           </div>
 
@@ -290,6 +295,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               onClick={onClose}
               disabled={loading}
               className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              data-testid="ingreso-btn-cancelar"
             >
               Cancelar
             </button>
@@ -297,6 +303,7 @@ const FormularioIngreso: React.FC<FormularioIngresoProps> = ({ onClose, onIngres
               type="submit"
               disabled={loading}
               className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              data-testid="ingreso-btn-guardar"
             >
               {loading ? (
                 <>

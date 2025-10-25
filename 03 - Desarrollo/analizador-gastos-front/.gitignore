@@ -25,6 +25,12 @@ dist-ssr
 
 .env
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+tests-e2e/storageState.json
+
 # Ignorar .env del backend
 03 - Desarrollo/backend/.env
 

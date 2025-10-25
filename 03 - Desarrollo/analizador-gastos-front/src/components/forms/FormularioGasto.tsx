@@ -249,6 +249,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
                     onChange={(value) => handleInputChange('fecha', value)}
                     error={errors.fecha}
                     placeholder="dd/mm/aaaa"
+                    data-testid="gasto-input-fecha"
                   />
                 </div>
                 <div className="relative">
@@ -261,6 +262,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
                     onChange={(e) => handleInputChange('monto', e.target.value)}
                     error={errors.monto}
                     className="pl-10"
+                    data-testid="gasto-input-monto"
                   />
                 </div>
               </div>
@@ -276,6 +278,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
                     onChange={(e) => handleInputChange('comercio', e.target.value)}
                     error={errors.comercio}
                     className="pl-10"
+                    data-testid="gasto-input-comercio"
                   />
                 </div>
                 <div className="relative">
@@ -287,6 +290,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
                     onChange={(e) => handleInputChange('id_categoria', e.target.value)}
                     error={errors.id_categoria}
                     className="pl-10"
+                    data-testid="gasto-input-categoria"
                   />
                 </div>
               </div>
@@ -298,6 +302,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
                 value={formData.descripcion}
                 onChange={(e) => handleInputChange('descripcion', e.target.value)}
                 error={errors.descripcion}
+                data-testid="gasto-input-descripcion"
               />
             </CardContent>
           </Card>
@@ -311,6 +316,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
             onClick={handleClose}
             disabled={isSubmitting}
             {...getHoverStyles('outline')}
+            data-testid="gasto-btn-cancelar"
           >
             <X className="w-4 h-4 mr-2" />
             Cancelar
@@ -319,6 +325,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
             type="submit"
             disabled={isSubmitting || isLoading}
             className="bg-teal-600 hover:bg-teal-700 text-white transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
+            data-testid="gasto-btn-guardar"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

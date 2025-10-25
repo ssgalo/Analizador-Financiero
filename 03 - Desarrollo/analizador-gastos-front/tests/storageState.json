@@ -1,0 +1,22 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "auth_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJuaWNvbTJAbWFpbC5jb20iLCJ1c2VyX2lkIjo4LCJleHAiOjE3NjA3Mzk0NDJ9.8mnIQJIcBnxMC9kC8nV0FPnaGrz5JPA9w7vMZWl7Ys0"
+        },
+        {
+          "name": "user_info",
+          "value": "{\"id_usuario\":8,\"nombre\":\"nicom2\",\"email\":\"nicom2@mail.com\",\"usuario\":\"nicom2\",\"estado\":\"activo\"}"
+        },
+        {
+          "name": "auth-store",
+          "value": "{\"state\":{\"user\":{\"id_usuario\":8,\"nombre\":\"nicom2\",\"email\":\"nicom2@mail.com\",\"usuario\":\"nicom2\",\"estado\":\"activo\"},\"isAuthenticated\":true,\"isLoading\":false,\"tokenExpiry\":1760739444755,\"sessionExpired\":false},\"version\":0}"
+        }
+      ]
+    }
+  ]
+}

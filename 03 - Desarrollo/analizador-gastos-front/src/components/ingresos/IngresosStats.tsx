@@ -35,35 +35,51 @@ const IngresosStats: React.FC<IngresosStatsProps> = ({ estadisticas, loading }) 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-      <Card>
+      <Card data-testid="ingresos-total-card" aria-label="Estadística de total de ingresos del mes">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total de ingresos</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <DollarSign className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">${formatCurrency(totalValido)}</div>
+          <div 
+            className="text-2xl font-bold"
+            data-testid="ingresos-total-valor"
+            aria-label={`Total de ingresos: ${formatCurrency(totalValido)} pesos`}
+          >
+            ${formatCurrency(totalValido)}
+          </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-testid="ingresos-promedio-card" aria-label="Estadística de promedio por ingreso">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Promedio por Ingreso</CardTitle>
-          <Calculator className="h-4 w-4 text-muted-foreground" />
+          <Calculator className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div 
+            className="text-2xl font-bold"
+            data-testid="ingresos-promedio-valor"
+            aria-label={`Promedio por ingreso: ${formatCurrency(promedioValido)} pesos`}
+          >
             ${formatCurrency(promedioValido)}
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-testid="ingresos-cantidad-card" aria-label="Estadística de cantidad total de ingresos registrados">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Cantidad de ingresos</CardTitle>
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{cantidadValida}</div>
+          <div 
+            className="text-2xl font-bold"
+            data-testid="ingresos-cantidad-valor"
+            aria-label={`Cantidad de ingresos: ${cantidadValida} registrados`}
+          >
+            {cantidadValida}
+          </div>
         </CardContent>
       </Card>
     </div>

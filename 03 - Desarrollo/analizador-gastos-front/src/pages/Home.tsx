@@ -79,28 +79,44 @@ const Home: React.FC = () => {
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-7xl mx-auto">
         {/* Sección de Bienvenida */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between" data-testid="dashboard-bienvenida">
           <div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">
+            <h2 
+              className="text-3xl font-bold text-foreground mb-2"
+              data-testid="dashboard-saludo-usuario"
+            >
               Bienvenido de vuelta, {usuario?.nombre || user?.nombre || 'Usuario'}
             </h2>
             <p className="text-gray-600">Aquí tienes un resumen de tu situación financiera actual</p>
           </div>
-          <Button onClick={refreshData} variant="outline" size="sm" className="hover:bg-slate-100 hover:border-slate-300">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            onClick={refreshData} 
+            variant="outline" 
+            size="sm"
+            data-testid="dashboard-refresh-btn"
+            aria-label="Actualizar datos del dashboard"
+            className="hover:bg-slate-100 hover:border-slate-300"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
             Actualizar
           </Button>
         </div>
 
         {/* Tarjetas de Métricas Clave */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card data-testid="dashboard-gastos-card" aria-label="Total de gastos del mes">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gastos del Mes</CardTitle>
-              <TrendingDown className="h-4 w-4 text-coral" />
+              <TrendingDown className="h-4 w-4 text-coral" aria-hidden="true" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${formatCurrency(totalGastos)}</div>
+              <div 
+                className="text-2xl font-bold" 
+                data-testid="dashboard-gastos-valor"
+                aria-label={`Gastos totales: ${formatCurrency(totalGastos)} pesos`}
+              >
+                ${formatCurrency(totalGastos)}
+              </div>
               <p className="text-xs text-gray-600">
                 {totalGastos > 0 ? (
                   <span className="text-coral">Mes actual</span>
@@ -111,13 +127,19 @@ const Home: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-testid="dashboard-ingresos-card" aria-label="Total de ingresos del mes">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ingresos del Mes</CardTitle>
-              <TrendingUp className="h-4 w-4 text-teal" />
+              <TrendingUp className="h-4 w-4 text-teal" aria-hidden="true" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${formatCurrency(totalIngresos)}</div>
+              <div 
+                className="text-2xl font-bold" 
+                data-testid="dashboard-ingresos-valor"
+                aria-label={`Ingresos totales: ${formatCurrency(totalIngresos)} pesos`}
+              >
+                ${formatCurrency(totalIngresos)}
+              </div>
               <p className="text-xs text-gray-600">
                 {totalIngresos > 0 ? (
                   <span className="text-teal">Mes actual</span>
@@ -128,13 +150,17 @@ const Home: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-testid="dashboard-ahorro-card" aria-label="Ahorro del mes (diferencia entre ingresos y gastos)">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ahorro del Mes</CardTitle>
-              <Wallet className="h-4 w-4 text-golden" />
+              <Wallet className="h-4 w-4 text-golden" aria-hidden="true" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${ahorro >= 0 ? 'text-teal' : 'text-coral'}`}>
+              <div 
+                className={`text-2xl font-bold ${ahorro >= 0 ? 'text-teal' : 'text-coral'}`}
+                data-testid="dashboard-ahorro-valor"
+                aria-label={`Ahorro: ${ahorro >= 0 ? '' : 'déficit de '}${formatCurrency(Math.abs(ahorro))} pesos`}
+              >
                 ${formatCurrency(Math.abs(ahorro))}
               </div>
               <p className="text-xs text-gray-600">
@@ -143,13 +169,13 @@ const Home: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-testid="dashboard-meta-card" aria-label="Meta de ahorro mensual">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Meta de Ahorro</CardTitle>
-              <Target className="h-4 w-4 text-golden" />
+              <Target className="h-4 w-4 text-golden" aria-hidden="true" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">75%</div>
+              <div className="text-2xl font-bold" data-testid="dashboard-meta-valor">75%</div>
               <Progress value={75} className="mt-2" />
               <p className="text-xs text-gray-600 mt-1">$3,000 para alcanzar meta</p>
             </CardContent>
@@ -159,12 +185,12 @@ const Home: React.FC = () => {
         {/* Sección de Gráficos y Visualizaciones */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Gráfico de Tendencia Mensual */}
-          <Card>
+          <Card data-testid="dashboard-chart-tendencia">
             <CardHeader>
               <CardTitle>Tendencia Mensual</CardTitle>
               <CardDescription>Comparación de ingresos vs gastos en los últimos 6 meses</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent aria-label="Gráfico de tendencia de gastos e ingresos por mes">
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={estadisticas?.tendenciaMensual || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
@@ -192,12 +218,12 @@ const Home: React.FC = () => {
           </Card>
 
           {/* Desglose por Categorías */}
-          <Card>
+          <Card data-testid="dashboard-chart-distribucion">
             <CardHeader>
               <CardTitle>Gastos por Categoría</CardTitle>
               <CardDescription>Distribución de tus gastos este mes</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent aria-label="Distribución de gastos por categoría">
               <div className="space-y-4">
                 {estadisticas?.gastosPorCategoria && estadisticas.gastosPorCategoria.length > 0 ? (
                   estadisticas.gastosPorCategoria.map((category, index) => {

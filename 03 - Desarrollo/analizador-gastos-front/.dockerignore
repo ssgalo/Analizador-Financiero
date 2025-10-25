@@ -14,3 +14,26 @@ coverage
 .idea
 *.log
 .DS_Store
+
+# Test files
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+*.spec.ts
+*.spec.tsx
+*.spec.js
+*.spec.jsx
+*.jest.*
+tests/
+test/
+__tests__/
+playwright.config.ts
+playwright-report/
+test-results/
+
+# Jest configuration
+jest.config.js
+jest.config.ts
+jest.setup.js
+jest.setup.ts
