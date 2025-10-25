@@ -27,8 +27,8 @@ test.describe('Ingresos E2E Tests', () => {
   });
 
   test('E2E-011: Debe mostrar la lista de ingresos', async () => {
-    // Verificar el heading principal
-    await expect(page.getByRole('heading', { name: /Mis Ingresos|Ingresos/i })).toBeVisible({ timeout: 5000 });
+    // Verificar el heading principal (usar .first() para evitar strict mode en Firefox)
+    await expect(page.getByRole('heading', { name: /Mis Ingresos|Ingresos/i }).first()).toBeVisible({ timeout: 5000 });
     
     // Verificar que hay componentes de stats de ingresos (más confiable que buscar tabla)
     const statsCount = await page.locator('[data-testid^="ingresos-"]').count();
