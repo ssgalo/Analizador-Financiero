@@ -1,27 +1,17 @@
-﻿import { defineConfig, devices } from '@playwright/test';
-import * as dotenv from 'dotenv';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-// Obtener __dirname en ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Cargar variables de entorno desde .env.test
-dotenv.config({ path: resolve(__dirname, '.env.test') });
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './playwright_tests/tests',
+  testDir: '../tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [
-    ['html', { outputFolder: './playwright_tests/reports/playwright-report' }],
-    ['json', { outputFile: './playwright_tests/reports/test-results/results.json' }],
+    ['html', { outputFolder: '../reports/playwright-report' }],
+    ['json', { outputFile: '../reports/test-results/results.json' }],
     ['list'],
   ],
-  outputDir: './playwright_tests/reports/test-results/',
+  outputDir: '../reports/test-results/',
   use: {
     baseURL: 'http://localhost:3000',
     screenshot: 'only-on-failure',
@@ -37,8 +27,10 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
+  // ⚠️ IMPORTANTE: El webServer debe apuntar al proyecto frontend
+  // Ejecutar desde la raíz del proyecto: "03 - Desarrollo/analizador-gastos-front"
   webServer: {
-    command: 'npm run dev',
+    command: 'cd "../../03 - Desarrollo/analizador-gastos-front" && npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

@@ -1,0 +1,29 @@
+# Playwright Test Results
+reports/
+test-results/
+playwright-report/
+
+# Videos y Screenshots
+*.webm
+*.mp4
+
+# Traces
+*.zip
+
+# Storage State (auth sessions)
+**/storageState.json
+auth/storageState.json
+
+# Node modules (si se instala localmente)
+node_modules/
+
+# Environment variables (mantener .env.test en el repo)
+# .env.test está versionado porque contiene credenciales de prueba
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
