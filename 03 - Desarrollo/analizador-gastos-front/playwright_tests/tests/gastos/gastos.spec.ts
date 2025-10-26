@@ -7,7 +7,7 @@ test.describe('Gastos E2E Tests', () => {
     page = await browser.newPage();
 
     // Login antes de cada test
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForLoadState('domcontentloaded');
     const email = process.env.TEST_USER_EMAIL!;
     const password = process.env.TEST_USER_PASSWORD!;
@@ -15,15 +15,22 @@ test.describe('Gastos E2E Tests', () => {
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/^http:\/\/localhost:(3000|5173)\/$/);
+    await page.waitForURL(/^http:\/\/localhost:(3000|5173)\/$/, { timeout: 30000 });
+    
+    // Esperar a que el dashboard cargue
+    await page.waitForLoadState('networkidle');
 
     // Navegar a Gastos
     await page.click('text=/Gastos|Expenses/i');
-    await page.waitForURL('**/gastos');
+    await page.waitForURL('**/gastos', { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000); // Dar tiempo para que React renderice
   });
 
   test.afterEach(async () => {
-    await page.close();
+    if (page && !page.isClosed()) {
+      await page.close();
+    }
   });
 
   test('E2E-006: Debe mostrar la lista de gastos', async () => {

@@ -5,12 +5,14 @@ test.describe('Authentication E2E Tests', () => {
 
   test.beforeEach(async ({ browser }) => {
     page = await browser.newPage();
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async () => {
-    await page.close();
+    if (page && !page.isClosed()) {
+      await page.close();
+    }
   });
 
   test('E2E-001: Debe mostrar la página de login inicialmente', async () => {

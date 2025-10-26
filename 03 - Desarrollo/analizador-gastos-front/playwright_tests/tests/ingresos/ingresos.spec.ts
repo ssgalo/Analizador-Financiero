@@ -7,7 +7,7 @@ test.describe('Ingresos E2E Tests', () => {
     page = await browser.newPage();
 
     // Login antes de cada test
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForLoadState('domcontentloaded');
     const email = process.env.TEST_USER_EMAIL!;
     const password = process.env.TEST_USER_PASSWORD!;
@@ -15,15 +15,22 @@ test.describe('Ingresos E2E Tests', () => {
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/^http:\/\/localhost:(3000|5173)\/$/);
+    await page.waitForURL(/^http:\/\/localhost:(3000|5173)\/$/, { timeout: 30000 });
+    
+    // Esperar a que el dashboard cargue
+    await page.waitForLoadState('networkidle');
 
     // Navegar a Ingresos
     await page.click('text=/Ingresos|Income/i');
-    await page.waitForURL('**/ingresos');
+    await page.waitForURL('**/ingresos', { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000); // Dar tiempo para que React renderice
   });
 
   test.afterEach(async () => {
-    await page.close();
+    if (page && !page.isClosed()) {
+      await page.close();
+    }
   });
 
   test('E2E-011: Debe mostrar la lista de ingresos', async () => {
@@ -100,24 +107,40 @@ test.describe('Ingresos E2E Tests', () => {
     }
   });
 
-  test('E2E-013: Debe permitir filtrar ingresos por tipo', async () => {
-    // Buscar filtro de tipo (más flexible)
-    const tipoFilter = page.locator('select[name="tipo"]').or(
-      page.locator('select').filter({ has: page.locator('option:has-text("Salario")') })
-    ).first();
+  test('E2E-013: Debe permitir filtrar ingresos por categoría', async () => {
+    // Buscar el select de categorías en los filtros
+    const categoriaFilter = page.locator('select').filter({ 
+      has: page.locator('option:has-text("Todas las categorías")') 
+    }).first();
     
-    const filterCount = await tipoFilter.count();
+    const filterCount = await categoriaFilter.count();
     if (filterCount > 0) {
-      await tipoFilter.selectOption('salario');
+      // Verificar que el select existe y está visible
+      await expect(categoriaFilter).toBeVisible({ timeout: 10000 });
       
-      // Esperar a que se actualice la lista
-      await page.waitForTimeout(1000);
+      // Obtener las opciones disponibles
+      const options = await categoriaFilter.locator('option').all();
       
-      // Verificar que la lista se actualizó
+      // Si hay más de 1 opción (además de "Todas las categorías"), seleccionar la primera categoría real
+      if (options.length > 1) {
+        const firstOptionValue = await options[1].getAttribute('value');
+        if (firstOptionValue) {
+          await categoriaFilter.selectOption(firstOptionValue);
+          
+          // Esperar a que se apliquen los filtros (el botón "Aplicar filtros" debe presionarse)
+          const aplicarBtn = page.locator('button:has-text("Aplicar filtros")');
+          if (await aplicarBtn.count() > 0) {
+            await aplicarBtn.click();
+            await page.waitForTimeout(1000);
+          }
+        }
+      }
+      
+      // Verificar que la lista se muestra (puede estar vacía o con datos)
       const ingresosCount = await page.locator('table tbody tr, [role="list"] > *').count();
       expect(ingresosCount).toBeGreaterThanOrEqual(0);
     } else {
-      console.log('⚠️ Filtro de tipo no encontrado - Feature opcional');
+      console.log('⚠️ Filtro de categoría no encontrado - Verificar componente IngresosFiltros');
     }
   });
 

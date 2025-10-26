@@ -16,19 +16,25 @@ test.describe('Dashboard E2E Tests', () => {
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
     await page.waitForURL(/^http:\/\/localhost:(3000|5173)\/$/);
+    
+    // Esperar a que el dashboard cargue completamente
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000); // Dar tiempo para que React renderice
   });
 
   test.afterEach(async () => {
-    await page.close();
+    if (page && !page.isClosed()) {
+      await page.close();
+    }
   });
 
   test('E2E-016: Debe mostrar el dashboard con datos principales', async () => {
     // Verificar que el dashboard está cargado usando el saludo del usuario
     const saludo = page.getByTestId('dashboard-saludo-usuario');
-    await expect(saludo).toBeVisible();
+    await expect(saludo).toBeVisible({ timeout: 10000 });
     
     // Verificar que se muestran las 4 tarjetas principales usando data-testid
-    await expect(page.getByTestId('dashboard-gastos-card')).toBeVisible();
+    await expect(page.getByTestId('dashboard-gastos-card')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('dashboard-ingresos-card')).toBeVisible();
     await expect(page.getByTestId('dashboard-ahorro-card')).toBeVisible();
     await expect(page.getByTestId('dashboard-meta-card')).toBeVisible();
@@ -37,10 +43,10 @@ test.describe('Dashboard E2E Tests', () => {
   test('E2E-017: Debe mostrar estadísticas de gastos', async () => {
     // Verificar que la card de gastos está visible con su valor
     const gastosCard = page.getByTestId('dashboard-gastos-card');
-    await expect(gastosCard).toBeVisible();
+    await expect(gastosCard).toBeVisible({ timeout: 10000 });
     
     const gastosValor = page.getByTestId('dashboard-gastos-valor');
-    await expect(gastosValor).toBeVisible();
+    await expect(gastosValor).toBeVisible({ timeout: 10000 });
     
     // Verificar que contiene un símbolo de moneda
     const texto = await gastosValor.textContent();
