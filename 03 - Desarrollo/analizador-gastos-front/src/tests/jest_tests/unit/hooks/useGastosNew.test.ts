@@ -72,7 +72,8 @@ describe('useGastos', () => {
 
     expect(result.current.gastos).toEqual([]);
     expect(result.current.categorias).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
+    // isLoading inicia en true porque el hook carga datos automáticamente en useEffect
+    expect(result.current.isLoading).toBe(true);
     expect(result.current.error).toBe(null);
     expect(result.current.totalGastos).toBe(0);
   });

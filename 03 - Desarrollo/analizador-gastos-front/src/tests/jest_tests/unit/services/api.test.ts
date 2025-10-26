@@ -1,5 +1,5 @@
 // Mock del módulo api completo antes de importarlo
-jest.mock('./api', () => {
+jest.mock('@services/api', () => {
   return {
     gastosService: {
       getGastos: jest.fn(),
@@ -10,7 +10,8 @@ jest.mock('./api', () => {
   };
 });
 
-import { gastosService } from './api';
+// Ahora importamos el módulo mockeado
+import { gastosService } from '@services/api';
 
 // Definir la interfaz localmente para el test
 interface GastoCreate {
