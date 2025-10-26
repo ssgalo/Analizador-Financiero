@@ -2,12 +2,12 @@
  * Tests para el hook useGastos
  */
 import { renderHook, act } from '@testing-library/react';
-import { useGastos } from './useGastos';
-import { gastosService, categoriasService, authService } from '../services/api';
-import type { Gasto, Categoria, User } from '../services/api';
+import { useGastos } from '@hooks/useGastos';
+import { gastosService, categoriasService, authService } from '@services/api';
+import type { Gasto, Categoria, User } from '@services/api';
 
 // Mock de los servicios
-jest.mock('../services/api', () => ({
+jest.mock('@services/api', () => ({
   gastosService: {
     getGastos: jest.fn(),
     createGasto: jest.fn(),

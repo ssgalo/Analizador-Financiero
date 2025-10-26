@@ -1,10 +1,15 @@
 {
   "preset": "ts-jest",
   "testEnvironment": "jsdom",
-  "setupFilesAfterEnv": ["<rootDir>/src/test/setup.ts"],
+  "setupFilesAfterEnv": ["<rootDir>/src/tests/jest_tests/setup/setup.ts"],
   "testMatch": [
-    "**/__tests__/**/*.(ts|tsx|js)",
-    "**/*.(test|spec).(ts|tsx|js)"
+    "**/src/tests/jest_tests/**/*.test.(ts|tsx)"
+  ],
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "/playwright_tests/",
+    "/dist/",
+    "/build/"
   ],
   "transform": {
     "^.+\\.(ts|tsx)$": ["ts-jest", {
@@ -12,14 +17,23 @@
         "jsx": "react",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
-        "module": "esnext"
+        "module": "commonjs",
+        "target": "es2020"
+      },
+      "isolatedModules": true,
+      "diagnostics": {
+        "ignoreCodes": [1343, 2339]
       }
     }]
   },
   "moduleNameMapper": {
     "\\.(css|less|scss)$": "identity-obj-proxy",
-    "^@/(.*)$": "<rootDir>/src/$1"
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@components/(.*)$": "<rootDir>/src/components/$1",
+    "^@services/(.*)$": "<rootDir>/src/services/$1",
+    "^@hooks/(.*)$": "<rootDir>/src/hooks/$1"
   },
+  "modulePaths": ["<rootDir>/src"],
   "collectCoverageFrom": [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",

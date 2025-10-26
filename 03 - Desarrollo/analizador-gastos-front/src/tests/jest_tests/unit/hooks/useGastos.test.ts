@@ -1,9 +1,9 @@
 import { renderHook, act } from '@testing-library/react';
-import { useGastos } from './useGastos';
-import * as api from '../services/api';
+import { useGastos } from '@hooks/useGastos';
+import * as api from '@services/api';
 
 // Mock del servicio API
-jest.mock('../services/api');
+jest.mock('@services/api');
 const mockedApi = api as any;
 
 describe('useGastos Hook', () => {

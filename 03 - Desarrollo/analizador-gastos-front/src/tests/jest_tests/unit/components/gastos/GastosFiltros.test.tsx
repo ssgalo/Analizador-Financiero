@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { GastosFiltros } from './GastosFiltros';
-import type { Categoria } from '../../services/api';
+import { GastosFiltros } from '@components/gastos/GastosFiltros';
+import type { Categoria } from '@services/api';
 
 const mockCategorias: Categoria[] = [
   { 
