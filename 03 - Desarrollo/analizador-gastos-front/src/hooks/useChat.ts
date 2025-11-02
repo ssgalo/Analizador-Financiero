@@ -30,7 +30,22 @@ export const useChat = (): UseChatReturn => {
 
   // Cargar conversaciones al montar
   useEffect(() => {
-    cargarConversaciones();
+    const cargarInicial = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const convs = await chatApi.obtenerConversaciones();
+        setConversaciones(Array.isArray(convs) ? convs : []);
+      } catch (err) {
+        console.error('Error al cargar conversaciones:', err);
+        setError(err instanceof Error ? err.message : 'Error al cargar conversaciones');
+        setConversaciones([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    cargarInicial();
   }, []);
 
   const cargarConversaciones = useCallback(async () => {
@@ -97,32 +112,79 @@ export const useChat = (): UseChatReturn => {
     setIsTyping(true);
     setError(null);
 
+    // ID temporal para el mensaje del asistente
+    const mensajeAsistenteId = `response-${Date.now()}`;
+    
+    // Agregar mensaje del asistente vacío para streaming
+    const mensajeAsistenteInicial: ChatMessage = {
+      id: mensajeAsistenteId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+    
+    setMensajes((prev: ChatMessage[]) => [...prev, mensajeAsistenteInicial]);
+
     try {
-      const response = await chatApi.enviarMensaje({
-        mensaje,
-        conversacion_id: conversacionActual?.id,
-      });
-
-      const mensajeAsistente: ChatMessage = {
-        id: `response-${Date.now()}`,
-        role: 'assistant',
-        content: response.respuesta,
-        timestamp: new Date(),
-      };
-
-      setMensajes((prev: ChatMessage[]) => [...prev, mensajeAsistente]);
-
-      // Actualizar ID de conversación si es nueva
-      if (!conversacionActual?.id && response.conversacion_id) {
-        const conv = await chatApi.obtenerConversacion(response.conversacion_id);
-        setConversacionActual(conv);
-        await cargarConversaciones();
-      }
+      await chatApi.enviarMensajeStreaming(
+        {
+          mensaje,
+          conversacion_id: conversacionActual?.id,
+        },
+        {
+          onChunk: (chunk: string) => {
+            // Actualizar el mensaje del asistente con el nuevo chunk
+            setMensajes((prev: ChatMessage[]) => 
+              prev.map((msg: ChatMessage) => 
+                msg.id === mensajeAsistenteId 
+                  ? { ...msg, content: msg.content + chunk }
+                  : msg
+              )
+            );
+          },
+          onComplete: async (fullResponse: string, conversacionId: string) => {
+            // Asegurar que el mensaje final esté completo
+            setMensajes((prev: ChatMessage[]) => 
+              prev.map((msg: ChatMessage) => 
+                msg.id === mensajeAsistenteId 
+                  ? { ...msg, content: fullResponse }
+                  : msg
+              )
+            );
+            
+            // Actualizar ID de conversación si es nueva
+            if (!conversacionActual?.id && conversacionId) {
+              try {
+                const conv = await chatApi.obtenerConversacion(conversacionId);
+                setConversacionActual(conv);
+                await cargarConversaciones();
+              } catch (err) {
+                console.error('Error al actualizar conversación:', err);
+              }
+            }
+            
+            setIsTyping(false);
+          },
+          onError: (error: Error) => {
+            setError(error.message);
+            // Remover ambos mensajes si hubo error
+            setMensajes((prev: ChatMessage[]) => 
+              prev.filter((m: ChatMessage) => 
+                m.id !== nuevoMensajeUsuario.id && m.id !== mensajeAsistenteId
+              )
+            );
+            setIsTyping(false);
+          }
+        }
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar mensaje');
-      // Remover el mensaje del usuario si hubo error
-      setMensajes((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m.id !== nuevoMensajeUsuario.id));
-    } finally {
+      // Remover ambos mensajes si hubo error
+      setMensajes((prev: ChatMessage[]) => 
+        prev.filter((m: ChatMessage) => 
+          m.id !== nuevoMensajeUsuario.id && m.id !== mensajeAsistenteId
+        )
+      );
       setIsTyping(false);
     }
   }, [conversacionActual, cargarConversaciones]);

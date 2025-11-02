@@ -14,10 +14,13 @@ y proporciona recomendaciones personalizadas usando GPT-4.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 import uuid
+import json
+import asyncio
 from datetime import datetime, date
 
 from app.schemas.chat import (
@@ -344,6 +347,112 @@ async def enviar_mensaje(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al procesar mensaje: {str(e)}"
         )
+
+
+@router.post("/mensaje/stream")
+async def enviar_mensaje_streaming(
+    request: ChatMensajeRequest,
+    current_user: Optional[Usuario] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """Enviar un mensaje al asistente IA y recibir respuesta en streaming"""
+    
+    async def generar_stream():
+        try:
+            adaptador = obtener_adaptador_ia()
+            user_id = current_user.id_usuario if current_user else None
+            conversacion_id = request.conversacion_id or str(uuid.uuid4())
+            
+            # Inicializar conversación si no existe
+            if conversacion_id not in conversaciones:
+                conversaciones[conversacion_id] = {
+                    "id": conversacion_id,
+                    "user_id": user_id,
+                    "titulo": request.mensaje[:50] + "..." if len(request.mensaje) > 50 else request.mensaje,
+                    "mensajes": [],
+                    "fecha_creacion": datetime.now().isoformat(),
+                    "fecha_actualizacion": datetime.now().isoformat()
+                }
+            
+            # Agregar mensaje del usuario
+            mensaje_usuario = {
+                "id": str(uuid.uuid4()),
+                "rol": "user",
+                "contenido": request.mensaje,
+                "timestamp": datetime.now().isoformat()
+            }
+            conversaciones[conversacion_id]["mensajes"].append(mensaje_usuario)
+            
+            # Preparar historial
+            historial = [
+                ChatMessage(role=msg["rol"], content=msg["contenido"])
+                for msg in conversaciones[conversacion_id]["mensajes"]
+            ]
+            
+            # Obtener contexto financiero
+            contexto_adicional = ""
+            if user_id:
+                contexto_adicional = obtener_contexto_gastos(user_id, db)
+            
+            # Generar respuesta (sin streaming por ahora, simularemos)
+            respuesta_ia = await adaptador.generar_respuesta(
+                mensajes=historial,
+                contexto_adicional=contexto_adicional,
+                temperatura=request.temperatura,
+                max_tokens=request.max_tokens
+            )
+            
+            # Enviar conversacion_id primero
+            yield f"data: {json.dumps({'conversacion_id': conversacion_id})}\n\n"
+            
+            # Simular streaming dividiendo la respuesta en palabras
+            palabras = respuesta_ia.split(' ')
+            
+            for i, palabra in enumerate(palabras):
+                # Agregar espacio excepto en la última palabra
+                contenido = palabra + (' ' if i < len(palabras) - 1 else '')
+                
+                # Enviar chunk
+                chunk_data = {
+                    'content': contenido,
+                    'conversacion_id': conversacion_id
+                }
+                yield f"data: {json.dumps(chunk_data)}\n\n"
+                
+                # Pequeña pausa para simular streaming real
+                await asyncio.sleep(0.05)  # 50ms entre palabras
+            
+            # Guardar mensaje del asistente
+            mensaje_asistente = {
+                "id": str(uuid.uuid4()),
+                "rol": "assistant",
+                "contenido": respuesta_ia,
+                "timestamp": datetime.now().isoformat()
+            }
+            conversaciones[conversacion_id]["mensajes"].append(mensaje_asistente)
+            conversaciones[conversacion_id]["fecha_actualizacion"] = datetime.now().isoformat()
+            
+            # Señal de finalización
+            yield f"data: [DONE]\n\n"
+            
+        except Exception as e:
+            # Enviar error en formato de stream
+            error_data = {
+                'error': str(e),
+                'conversacion_id': conversacion_id if 'conversacion_id' in locals() else None
+            }
+            yield f"data: {json.dumps(error_data)}\n\n"
+            yield f"data: [DONE]\n\n"
+    
+    return StreamingResponse(
+        generar_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+        }
+    )
 
 
 @router.get("/conversaciones", response_model=List[ChatConversacionResumen])

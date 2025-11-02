@@ -6,34 +6,106 @@ import { useChat } from '../hooks/useChat';
 import { Send, Plus, MessageSquare, Trash2, Bot, User, Loader2, X } from 'lucide-react';
 
 export default function ChatPage() {
+  // Estado local con valores por defecto seguros
+  const [inputMensaje, setInputMensaje] = useState('');
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Hook con manejo de errores más robusto
+  let chatHook;
+  try {
+    chatHook = useChat();
+  } catch (error) {
+    console.error('Error al inicializar useChat:', error);
+    if (!hookError) {
+      setHookError(error instanceof Error ? error.message : 'Error desconocido');
+    }
+    return (
+      <div className="p-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <h2 className="font-bold">Error en el Chat</h2>
+          <p>No se pudo inicializar el chat. Error: {hookError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Recargar Página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Verificar que el hook retornó un objeto válido
+  if (!chatHook) {
+    return (
+      <div className="p-4">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          <h2 className="font-bold">Inicializando Chat...</h2>
+          <p>Cargando componentes del chat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Destructuring seguro con valores por defecto
   const {
-    mensajes,
-    conversaciones,
-    conversacionActual,
-    isLoading,
-    isTyping,
-    error,
+    mensajes = [],
+    conversaciones = [],
+    conversacionActual = null,
+    isLoading = false,
+    isTyping = false,
+    error = null,
     enviarMensaje,
     seleccionarConversacion,
     nuevaConversacion,
     eliminarConversacion,
     limpiarError,
-  } = useChat();
+  } = chatHook || {};
 
-  const [inputMensaje, setInputMensaje] = useState('');
-  const [showSidebar, setShowSidebar] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Verificaciones adicionales de seguridad
+  if (!enviarMensaje || !seleccionarConversacion || !nuevaConversacion || !eliminarConversacion) {
+    return (
+      <div className="p-4">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          <h2 className="font-bold">Cargando Chat...</h2>
+          <p>Inicializando funciones del chat...</p>
+          <div className="mt-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Auto-scroll al nuevo mensaje
+  // Auto-scroll al nuevo mensaje con validación
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    try {
+      if (messagesEndRef?.current && Array.isArray(mensajes) && mensajes.length > 0) {
+        // Usar setTimeout para asegurar que el DOM se ha actualizado
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    } catch (err) {
+      console.warn('Error en scroll automático:', err);
+    }
   }, [mensajes]);
 
   const handleEnviar = async () => {
     if (!inputMensaje.trim() || isTyping) return;
     
-    await enviarMensaje(inputMensaje);
-    setInputMensaje('');
+    try {
+      if (enviarMensaje) {
+        await enviarMensaje(inputMensaje);
+        setInputMensaje('');
+      }
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -43,13 +115,39 @@ export default function ChatPage() {
     }
   };
 
-  const formatearFecha = (fecha: Date) => {
-    return new Date(fecha).toLocaleString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatearFecha = (fecha: Date | string) => {
+    try {
+      // Validar que fecha no sea null o undefined
+      if (!fecha) {
+        return ''; // Retornar string vacío en lugar de "Sin fecha"
+      }
+      
+      // Manejar tanto objetos Date como strings ISO
+      let fechaObj: Date;
+      
+      if (typeof fecha === 'string') {
+        fechaObj = new Date(fecha);
+      } else if (fecha instanceof Date) {
+        fechaObj = fecha;
+      } else {
+        return ''; // Retornar string vacío en lugar de "Formato inválido"
+      }
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(fechaObj.getTime())) {
+        return ''; // Retornar string vacío en lugar de "Fecha inválida"
+      }
+      
+      return fechaObj.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return ''; // Retornar string vacío en lugar de "Error fecha"
+    }
   };
 
   return (
@@ -217,6 +315,20 @@ export default function ChatPage() {
                     >
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">
                         {mensaje.content}
+                        {/* Mostrar cursor parpadeante o puntos animados si está escribiendo */}
+                        {mensaje.role === 'assistant' && 
+                         isTyping && 
+                         mensaje.id === mensajes.filter(m => m.role === 'assistant').slice(-1)[0]?.id && (
+                          mensaje.content ? (
+                            <span className="inline-block w-2 h-4 bg-gray-500 ml-1 animate-pulse"></span>
+                          ) : (
+                            <span className="flex gap-1 inline-flex ml-2">
+                              <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                              <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                              <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                            </span>
+                          )
+                        )}
                       </p>
                       <p
                         className={`text-xs mt-2 ${
@@ -237,20 +349,7 @@ export default function ChatPage() {
                   </div>
                 ))}
 
-                {isTyping && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="bg-gray-100 rounded-lg p-3">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
+
 
                 <div ref={messagesEndRef} />
               </>
