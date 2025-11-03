@@ -34,7 +34,7 @@ interface EstadisticaResumen {
   balance: number;
   gastosPorCategoria: Array<{
     categoria: string;
-    total: number;
+    monto: number;
     porcentaje: number;
   }>;
   tendenciaMensual: Array<{
@@ -92,8 +92,6 @@ export default function ReportesPage() {
     setFechaDesde(fechaDesdeISO);
     setFechaHasta(fechaHastaISO);
     setPeriodoSeleccionado(tipo);
-
-
   };
 
   useEffect(() => {
@@ -156,12 +154,12 @@ export default function ReportesPage() {
       });
 
       const gastosPorCategoria = Object.entries(gastosPorCat)
-        .map(([categoria, total]) => ({
+        .map(([categoria, monto]) => ({
           categoria,
-          total,
-          porcentaje: totalGastos > 0 ? (total / totalGastos) * 100 : 0
+          monto,
+          porcentaje: totalGastos > 0 ? (monto / totalGastos) * 100 : 0
         }))
-        .sort((a, b) => b.total - a.total);
+        .sort((a, b) => b.monto - a.monto);
 
       const tendenciaMensual = await generarTendenciaMensual();
 
@@ -180,8 +178,6 @@ export default function ReportesPage() {
       setIsLoading(false);
     }
   };
-
-
 
   const generarTendenciaMensual = async () => {
     const tendencia = [];
@@ -254,22 +250,20 @@ export default function ReportesPage() {
     return nombres[periodoSeleccionado];
   };
 
-
-
   const exportarDatos = () => {
     if (!estadisticas) return;
     
     try {
       const csvRows = [
         ['Tipo', 'Concepto', 'Valor'],
-        ['Resumen', 'Total Ingresos', estadisticas.totalIngresos.toFixed(2)],
-        ['Resumen', 'Total Gastos', estadisticas.totalGastos.toFixed(2)],
+        ['Resumen', 'Ingresos', estadisticas.totalIngresos.toFixed(2)],
+        ['Resumen', 'Gastos', estadisticas.totalGastos.toFixed(2)],
         ['Resumen', 'Balance', estadisticas.balance.toFixed(2)],
         ['', '', ''],
         ['Categoría', 'Gasto', 'Porcentaje'],
         ...estadisticas.gastosPorCategoria.map(cat => [
           cat.categoria,
-          cat.total.toFixed(2),
+          cat.monto.toFixed(2),
           `${cat.porcentaje.toFixed(1)}%`
         ])
       ];
@@ -327,7 +321,7 @@ export default function ReportesPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Ingresos</CardTitle>
+              <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
@@ -339,7 +333,7 @@ export default function ReportesPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Gastos</CardTitle>
+              <CardTitle className="text-sm font-medium">Gastos</CardTitle>
               <TrendingDown className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
@@ -373,37 +367,36 @@ export default function ReportesPage() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
+                <PieChart key="gastos-por-categoria-chart">
                   <Pie
                     data={estadisticas.gastosPorCategoria.slice(0, 8)}
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
                     fill="#8884d8"
-                    dataKey="total"
+                    dataKey="monto"
                     nameKey="categoria"
-                    label={(entry: any) => `${entry.categoria}: ${entry.porcentaje.toFixed(1)}%`}
+                    label={false}
                   >
                     {estadisticas.gastosPorCategoria.slice(0, 8).map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORES[index % COLORES.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number, name: string) => [formatearMoneda(value), name]} />
-                  <Legend 
-                    content={() => (
-                      <ul className="flex flex-wrap justify-center gap-4 text-sm">
-                        {estadisticas.gastosPorCategoria.slice(0, 8).map((item, index) => (
-                          <li key={item.categoria} className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-sm" 
-                              style={{ backgroundColor: COLORES[index % COLORES.length] }}
-                            />
-                            <span>{item.categoria}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload[0]) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-2 border border-gray-300 rounded shadow">
+                            <p className="font-medium">{data.categoria}</p>
+                            <p className="text-sm">{formatearMoneda(data.monto)}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
                   />
+                  <Legend content={() => null} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -465,7 +458,7 @@ export default function ReportesPage() {
                         </div>
                       </td>
                       <td className="text-right py-2">
-                        {formatearMoneda(categoria.total)}
+                        {formatearMoneda(categoria.monto)}
                       </td>
                       <td className="text-right py-2">
                         {categoria.porcentaje.toFixed(1)}%
@@ -537,7 +530,7 @@ export default function ReportesPage() {
                     onClick={() => configurarPeriodo(tipo)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                       periodoSeleccionado === tipo
-                        ? 'bg-blue-600 text-white shadow-md'
+                        ? 'bg-slate-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -548,14 +541,14 @@ export default function ReportesPage() {
               </div>
               
               {fechaDesde && fechaHasta && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-blue-600" />
-                    <p className="text-sm text-blue-700 font-medium">
+                    <BarChart3 className="w-4 h-4 text-gray-600" />
+                    <p className="text-sm text-gray-700 font-medium">
                       {getNombrePeriodo()}
                     </p>
                   </div>
-                  <p className="text-xs text-blue-600 mt-1 ml-6">
+                  <p className="text-xs text-gray-600 mt-1 ml-6">
                     {formatearFechaParaMostrar(fechaDesde)} - {formatearFechaParaMostrar(fechaHasta)}
                   </p>
                 </div>
