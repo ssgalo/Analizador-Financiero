@@ -12,12 +12,16 @@ interface UseChatReturn {
   isLoading: boolean;
   isTyping: boolean;
   error: string | null;
+  tokensRestantes: number;
+  limiteDiario: number;
+  tokensUsadosHoy: number;
   enviarMensaje: (mensaje: string) => Promise<void>;
   cargarConversaciones: () => Promise<void>;
   seleccionarConversacion: (id: string) => Promise<void>;
   nuevaConversacion: () => Promise<void>;
   eliminarConversacion: (id: string) => Promise<void>;
   limpiarError: () => void;
+  cargarLimites: () => Promise<void>;
 }
 
 export const useChat = (): UseChatReturn => {
@@ -27,18 +31,35 @@ export const useChat = (): UseChatReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokensRestantes, setTokensRestantes] = useState<number>(10000);
+  const [limiteDiario, setLimiteDiario] = useState<number>(10000);
+  const [tokensUsadosHoy, setTokensUsadosHoy] = useState<number>(0);
 
-  // Cargar conversaciones al montar
+  const cargarLimites = useCallback(async () => {
+    try {
+      const limites = await chatApi.obtenerLimites();
+      setTokensRestantes(limites.tokens_restantes_dia);
+      setLimiteDiario(limites.limite_diario);
+      setTokensUsadosHoy(limites.tokens_usados_hoy);
+    } catch (err) {
+      console.error('Error al cargar límites:', err);
+    }
+  }, []);
+
+  // Cargar conversaciones y límites al montar
   useEffect(() => {
     const cargarInicial = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const convs = await chatApi.obtenerConversaciones();
+        const [convs] = await Promise.all([
+          chatApi.obtenerConversaciones(),
+          cargarLimites()
+        ]);
         setConversaciones(Array.isArray(convs) ? convs : []);
       } catch (err) {
-        console.error('Error al cargar conversaciones:', err);
-        setError(err instanceof Error ? err.message : 'Error al cargar conversaciones');
+        console.error('Error al cargar datos iniciales:', err);
+        setError(err instanceof Error ? err.message : 'Error al cargar datos');
         setConversaciones([]);
       } finally {
         setIsLoading(false);
@@ -46,7 +67,7 @@ export const useChat = (): UseChatReturn => {
     };
     
     cargarInicial();
-  }, []);
+  }, [cargarLimites]);
 
   const cargarConversaciones = useCallback(async () => {
     try {
@@ -163,6 +184,9 @@ export const useChat = (): UseChatReturn => {
               }
             }
             
+            // Recargar límites después del mensaje
+            await cargarLimites();
+            
             setIsTyping(false);
           },
           onError: (error: Error) => {
@@ -224,11 +248,15 @@ export const useChat = (): UseChatReturn => {
     isLoading,
     isTyping,
     error,
+    tokensRestantes,
+    limiteDiario,
+    tokensUsadosHoy,
     enviarMensaje,
     cargarConversaciones,
     seleccionarConversacion,
     nuevaConversacion,
     eliminarConversacion,
     limpiarError,
+    cargarLimites,
   };
 };

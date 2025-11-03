@@ -20,6 +20,9 @@ class ChatMensajeResponse(BaseModel):
     respuesta: str = Field(..., description="Respuesta generada por la IA")
     conversacion_id: str = Field(..., description="ID de la conversación")
     sugerencias: Optional[List[str]] = Field(None, description="Sugerencias de seguimiento")
+    tokens_utilizados: int = Field(0, description="Tokens utilizados en esta respuesta")
+    tokens_restantes_dia: int = Field(0, description="Tokens restantes para hoy")
+    limite_diario: int = Field(0, description="Límite diario de tokens")
 
 
 class ChatMensajeDetalle(BaseModel):
@@ -62,3 +65,22 @@ class ChatProveedorInfo(BaseModel):
     nombre: str
     estado: str  # 'conectado', 'desconectado', 'error'
     proveedores_disponibles: List[str]
+
+
+class ChatLimitesUsuario(BaseModel):
+    """Límites y uso de tokens del usuario"""
+    limite_diario: int = Field(10000, description="Límite diario de tokens")
+    limite_por_mensaje: int = Field(2000, description="Límite de tokens por mensaje")
+    tokens_usados_hoy: int = Field(0, description="Tokens utilizados hoy")
+    tokens_restantes_dia: int = Field(0, description="Tokens restantes para hoy")
+    mensajes_hoy: int = Field(0, description="Cantidad de mensajes enviados hoy")
+    ultimo_reset: datetime = Field(default_factory=datetime.now, description="Última vez que se reseteó el contador")
+
+
+class ChatEstadisticasUso(BaseModel):
+    """Estadísticas de uso del chat del usuario"""
+    total_conversaciones: int
+    total_mensajes: int
+    tokens_utilizados_mes: int
+    tokens_utilizados_semana: int
+    promedio_tokens_por_mensaje: float

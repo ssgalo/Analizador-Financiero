@@ -235,6 +235,8 @@ export const gastosService = {
     fecha_hasta?: string;
     id_categoria?: number;
   }): Promise<Gasto[]> {
+    console.log('🏗️ gastosService.getGastos llamado con filtros:', filtros);
+    
     const params = new URLSearchParams();
     if (filtros?.skip !== undefined) params.append('skip', filtros.skip.toString());
     if (filtros?.limit !== undefined) params.append('limit', filtros.limit.toString());
@@ -245,8 +247,17 @@ export const gastosService = {
 
     const queryString = params.toString();
     const url = `/gastos/${queryString ? '?' + queryString : ''}`;
-    const response = await apiClient.get<Gasto[]>(url);
-    return response.data;
+    
+    console.log('🌐 Haciendo petición GET a:', url);
+    
+    try {
+      const response = await apiClient.get<Gasto[]>(url);
+      console.log('✅ Respuesta gastos recibida:', response.data.length, 'gastos');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error en gastosService.getGastos:', error);
+      throw error;
+    }
   },
 
   // Obtener un gasto por ID
@@ -293,6 +304,8 @@ export const categoriasService = {
     limit?: number;
     es_personalizada?: boolean;
   }): Promise<Categoria[]> {
+    console.log('🏷️ categoriasService.getCategorias llamado con filtros:', filtros);
+    
     const params = new URLSearchParams();
     if (filtros?.skip !== undefined) params.append('skip', filtros.skip.toString());
     if (filtros?.limit !== undefined) params.append('limit', filtros.limit.toString());
@@ -300,8 +313,17 @@ export const categoriasService = {
 
     const queryString = params.toString();
     const url = `/categorias/${queryString ? '?' + queryString : ''}`;
-    const response = await apiClient.get<Categoria[]>(url);
-    return response.data;
+    
+    console.log('🌐 Haciendo petición GET a:', url);
+    
+    try {
+      const response = await apiClient.get<Categoria[]>(url);
+      console.log('✅ Respuesta categorías recibida:', response.data.length, 'categorías');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error en categoriasService.getCategorias:', error);
+      throw error;
+    }
   },
 
   // Obtener categorías de un usuario específico (incluye personalizadas y globales)
@@ -405,6 +427,8 @@ export const ingresosService = {
     fecha_desde?: string;
     fecha_hasta?: string;
   }): Promise<Ingreso[]> {
+    console.log('💰 ingresosService.getIngresos llamado con filtros:', filtros);
+    
     const params = new URLSearchParams();
     if (filtros?.skip !== undefined) params.append('skip', filtros.skip.toString());
     if (filtros?.limit !== undefined) params.append('limit', filtros.limit.toString());
@@ -416,8 +440,17 @@ export const ingresosService = {
 
     const queryString = params.toString();
     const url = `/ingresos/${queryString ? '?' + queryString : ''}`;
-    const response = await apiClient.get<Ingreso[]>(url);
-    return response.data;
+    
+    console.log('🌐 Haciendo petición GET a:', url);
+    
+    try {
+      const response = await apiClient.get<Ingreso[]>(url);
+      console.log('✅ Respuesta ingresos recibida:', response.data.length, 'ingresos');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error en ingresosService.getIngresos:', error);
+      throw error;
+    }
   },
 
   // Obtener un ingreso por ID

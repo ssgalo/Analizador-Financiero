@@ -93,6 +93,8 @@ def read_gastos(
     usuario_id: Optional[int] = None,
     categoria_id: Optional[int] = None,
     moneda: Optional[str] = None,
+    fecha_desde: Optional[str] = Query(None, description="Fecha desde (YYYY-MM-DD)"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha hasta (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
@@ -100,7 +102,7 @@ def read_gastos(
     Listar gastos del usuario autenticado
     
     Obtiene todos los gastos del usuario con opciones de filtrado por
-    categoría, moneda y paginación.
+    categoría, moneda, rango de fechas y paginación.
     
     Args:
         skip: Número de registros a omitir (para paginación)
@@ -108,6 +110,8 @@ def read_gastos(
         usuario_id: ID de usuario para filtrar (solo admin)
         categoria_id: Filtrar por categoría específica
         moneda: Código de moneda para filtrar (ej: 'ARS', 'USD')
+        fecha_desde: Fecha inicial del rango (formato: YYYY-MM-DD)
+        fecha_hasta: Fecha final del rango (formato: YYYY-MM-DD)
         db: Sesión de base de datos
         current_user: Usuario autenticado
         
@@ -115,7 +119,7 @@ def read_gastos(
         List[GastoResponse]: Lista de gastos ordenados por fecha descendente
         
     Example:
-        GET /api/v1/gastos/?categoria_id=1&limit=50
+        GET /api/v1/gastos/?fecha_desde=2025-10-01&fecha_hasta=2025-10-31
     """
     # Filtrar por el usuario autenticado
     query = db.query(Gasto).filter(Gasto.id_usuario == current_user.id_usuario)
@@ -127,6 +131,10 @@ def read_gastos(
         query = query.filter(Gasto.id_categoria == categoria_id)
     if moneda:
         query = query.filter(Gasto.moneda == moneda.upper())
+    if fecha_desde:
+        query = query.filter(Gasto.fecha >= fecha_desde)
+    if fecha_hasta:
+        query = query.filter(Gasto.fecha <= fecha_hasta)
     
     # Ordenar por ID descendente y aplicar paginación
     gastos = query.order_by(Gasto.id_gasto.desc()).offset(skip).limit(limit).all()

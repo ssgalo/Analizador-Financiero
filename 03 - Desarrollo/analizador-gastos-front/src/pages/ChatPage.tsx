@@ -57,15 +57,19 @@ export default function ChatPage() {
     isLoading = false,
     isTyping = false,
     error = null,
+    tokensRestantes = 10000,
+    limiteDiario = 10000,
+    tokensUsadosHoy = 0,
     enviarMensaje,
     seleccionarConversacion,
     nuevaConversacion,
     eliminarConversacion,
     limpiarError,
+    cargarLimites,
   } = chatHook || {};
 
   // Verificaciones adicionales de seguridad
-  if (!enviarMensaje || !seleccionarConversacion || !nuevaConversacion || !eliminarConversacion) {
+  if (!enviarMensaje || !seleccionarConversacion || !nuevaConversacion || !eliminarConversacion || !cargarLimites) {
     return (
       <div className="p-4">
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
@@ -254,6 +258,21 @@ export default function ChatPage() {
                     Consultas sobre tus gastos y finanzas
                   </p>
                 </div>
+              </div>
+              
+              {/* Indicador de tokens */}
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="text-gray-600">
+                    {tokensRestantes.toLocaleString()} / {limiteDiario.toLocaleString()} tokens
+                  </span>
+                </div>
+                {tokensUsadosHoy > 0 && (
+                  <div className="text-gray-500">
+                    {tokensUsadosHoy.toLocaleString()} usados hoy
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -27,6 +27,17 @@ export interface ChatResponse {
   respuesta: string;
   conversacion_id: string;
   sugerencias?: string[];
+  tokens_utilizados?: number;
+  tokens_restantes_dia?: number;
+  limite_diario?: number;
+}
+
+export interface ChatLimites {
+  limite_diario: number;
+  limite_por_mensaje: number;
+  tokens_usados_hoy: number;
+  tokens_restantes_dia: number;
+  mensajes_hoy: number;
 }
 
 export interface StreamingCallbacks {
@@ -146,6 +157,24 @@ export const chatApi = {
 
     if (!response.ok) {
       throw new Error(`Error al crear conversación: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtiene los límites y uso actual de tokens del usuario
+   */
+  async obtenerLimites(): Promise<ChatLimites> {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/api/v1/chat/limites`, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener límites: ${response.status}`);
     }
 
     return response.json();

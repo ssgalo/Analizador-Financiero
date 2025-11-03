@@ -30,10 +30,13 @@ from app.schemas.chat import (
     ChatConversacionResumen,
     ChatConversacionCreate,
     ChatMensajeDetalle,
-    ChatProveedorInfo
+    ChatProveedorInfo,
+    ChatLimitesUsuario,
+    ChatEstadisticasUso
 )
 from app.utils.ai_factory import obtener_adaptador_ia, AIAdapterFactory
 from app.utils.ai_adapter import ChatMessage
+from app.utils.token_limits import token_manager
 from app.api.deps import get_current_user, get_optional_user, get_db
 from app.models.usuario import Usuario
 from app.models.gasto import Gasto
@@ -290,7 +293,17 @@ async def enviar_mensaje(
     """Enviar un mensaje al asistente IA y recibir respuesta"""
     try:
         adaptador = obtener_adaptador_ia()
-        user_id = current_user.id_usuario if current_user else None
+        user_id = current_user.id_usuario if current_user else 0
+        
+        # Verificar límites de tokens antes de procesar
+        tokens_estimados = token_manager.estimar_tokens_mensaje(request.mensaje)
+        puede_enviar, mensaje_error = token_manager.puede_enviar_mensaje(user_id, tokens_estimados)
+        
+        if not puede_enviar:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Límite de tokens excedido: {mensaje_error}"
+            )
         conversacion_id = request.conversacion_id or str(uuid.uuid4())
         
         if conversacion_id not in conversaciones:
@@ -336,10 +349,23 @@ async def enviar_mensaje(
         conversaciones[conversacion_id]["mensajes"].append(mensaje_asistente)
         conversaciones[conversacion_id]["fecha_actualizacion"] = datetime.now().isoformat()
         
+        # Calcular tokens reales utilizados (estimación mejorada)
+        tokens_respuesta = token_manager.estimar_tokens_mensaje(respuesta_ia)
+        tokens_totales = tokens_estimados + tokens_respuesta
+        
+        # Registrar el uso real de tokens
+        token_manager.registrar_uso(user_id, tokens_totales)
+        
+        # Obtener estadísticas actualizadas
+        estadisticas = token_manager.obtener_estadisticas_usuario(user_id)
+        
         return ChatMensajeResponse(
             respuesta=respuesta_ia,
             conversacion_id=conversacion_id,
-            sugerencias=None
+            sugerencias=None,
+            tokens_utilizados=tokens_totales,
+            tokens_restantes_dia=estadisticas["tokens_restantes_dia"],
+            limite_diario=estadisticas["limite_diario"]
         )
         
     except Exception as e:
@@ -360,7 +386,20 @@ async def enviar_mensaje_streaming(
     async def generar_stream():
         try:
             adaptador = obtener_adaptador_ia()
-            user_id = current_user.id_usuario if current_user else None
+            user_id = current_user.id_usuario if current_user else 0
+            
+            # Verificar límites de tokens antes de procesar
+            tokens_estimados = token_manager.estimar_tokens_mensaje(request.mensaje)
+            puede_enviar, mensaje_error = token_manager.puede_enviar_mensaje(user_id, tokens_estimados)
+            
+            if not puede_enviar:
+                error_data = {
+                    'error': f"Límite de tokens excedido: {mensaje_error}",
+                    'codigo': 'TOKEN_LIMIT_EXCEEDED'
+                }
+                yield f"data: {json.dumps(error_data)}\n\n"
+                yield f"data: [DONE]\n\n"
+                return
             conversacion_id = request.conversacion_id or str(uuid.uuid4())
             
             # Inicializar conversación si no existe
@@ -431,6 +470,21 @@ async def enviar_mensaje_streaming(
             }
             conversaciones[conversacion_id]["mensajes"].append(mensaje_asistente)
             conversaciones[conversacion_id]["fecha_actualizacion"] = datetime.now().isoformat()
+            
+            # Calcular y registrar tokens utilizados
+            tokens_respuesta = token_manager.estimar_tokens_mensaje(respuesta_ia)
+            tokens_totales = tokens_estimados + tokens_respuesta
+            token_manager.registrar_uso(user_id, tokens_totales)
+            
+            # Enviar estadísticas finales
+            estadisticas = token_manager.obtener_estadisticas_usuario(user_id)
+            stats_data = {
+                'tokens_utilizados': tokens_totales,
+                'tokens_restantes_dia': estadisticas["tokens_restantes_dia"],
+                'limite_diario': estadisticas["limite_diario"],
+                'conversacion_id': conversacion_id
+            }
+            yield f"data: {json.dumps(stats_data)}\n\n"
             
             # Señal de finalización
             yield f"data: [DONE]\n\n"
@@ -610,5 +664,50 @@ async def obtener_proveedor():
     return ChatProveedorInfo(
         nombre=adaptador.nombre,
         modelo=adaptador.modelo
+    )
+
+
+@router.get("/limites", response_model=ChatLimitesUsuario)
+async def obtener_limites_usuario(
+    current_user: Optional[Usuario] = Depends(get_optional_user)
+):
+    """Obtener los límites y uso actual de tokens del usuario"""
+    user_id = current_user.id_usuario if current_user else 0
+    estadisticas = token_manager.obtener_estadisticas_usuario(user_id)
+    
+    return ChatLimitesUsuario(
+        limite_diario=estadisticas["limite_diario"],
+        limite_por_mensaje=estadisticas["limite_por_mensaje"],
+        tokens_usados_hoy=estadisticas["tokens_usados_hoy"],
+        tokens_restantes_dia=estadisticas["tokens_restantes_dia"],
+        mensajes_hoy=estadisticas["mensajes_hoy"],
+        ultimo_reset=datetime.now()  # Simplificado por ahora
+    )
+
+
+@router.get("/estadisticas", response_model=ChatEstadisticasUso)
+async def obtener_estadisticas_uso(
+    current_user: Optional[Usuario] = Depends(get_optional_user)
+):
+    """Obtener estadísticas de uso del chat del usuario"""
+    user_id = current_user.id_usuario if current_user else 0
+    
+    # Obtener estadísticas de conversaciones
+    conversaciones_usuario = [
+        conv for conv in conversaciones.values() 
+        if conv.get("user_id") == user_id
+    ]
+    
+    total_mensajes = sum(len(conv["mensajes"]) for conv in conversaciones_usuario)
+    estadisticas_tokens = token_manager.obtener_estadisticas_usuario(user_id)
+    
+    promedio_tokens = (estadisticas_tokens["tokens_mes"] / max(total_mensajes, 1)) if total_mensajes > 0 else 0
+    
+    return ChatEstadisticasUso(
+        total_conversaciones=len(conversaciones_usuario),
+        total_mensajes=total_mensajes,
+        tokens_utilizados_mes=estadisticas_tokens["tokens_mes"],
+        tokens_utilizados_semana=estadisticas_tokens["tokens_usados_hoy"] * 7,  # Estimación
+        promedio_tokens_por_mensaje=promedio_tokens
     )
 
