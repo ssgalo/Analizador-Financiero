@@ -7,15 +7,15 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: Date;
+  timestamp: Date | string; // Soportar tanto Date como string ISO
 }
 
 export interface ChatConversation {
   id: string;
   titulo: string;
   mensajes: ChatMessage[];
-  fecha_creacion: Date;
-  fecha_modificacion: Date;
+  fecha_creacion: Date | string; // Soportar tanto Date como string ISO
+  fecha_modificacion: Date | string; // Soportar tanto Date como string ISO
 }
 
 export interface ChatRequest {
@@ -27,6 +27,23 @@ export interface ChatResponse {
   respuesta: string;
   conversacion_id: string;
   sugerencias?: string[];
+  tokens_utilizados?: number;
+  tokens_restantes_dia?: number;
+  limite_diario?: number;
+}
+
+export interface ChatLimites {
+  limite_diario: number;
+  limite_por_mensaje: number;
+  tokens_usados_hoy: number;
+  tokens_restantes_dia: number;
+  mensajes_hoy: number;
+}
+
+export interface StreamingCallbacks {
+  onChunk: (chunk: string) => void;
+  onComplete: (fullResponse: string, conversacionId: string) => void;
+  onError: (error: Error) => void;
 }
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost';
@@ -143,5 +160,119 @@ export const chatApi = {
     }
 
     return response.json();
+  },
+
+  /**
+   * Obtiene los límites y uso actual de tokens del usuario
+   */
+  async obtenerLimites(): Promise<ChatLimites> {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/api/v1/chat/limites`, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener límites: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Envía un mensaje al chat con respuesta streaming
+   */
+  async enviarMensajeStreaming(request: ChatRequest, callbacks: StreamingCallbacks): Promise<void> {
+    const token = localStorage.getItem('auth_token');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/chat/mensaje/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(request),
+      });
+
+      // Si el endpoint de streaming no existe, usar el método tradicional
+      if (response.status === 404) {
+        console.warn('Endpoint de streaming no disponible, usando método tradicional');
+        const fallbackResponse = await this.enviarMensaje(request);
+        
+        // Simular streaming dividiendo la respuesta en chunks
+        const words = fallbackResponse.respuesta.split(' ');
+        let currentContent = '';
+        
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i] + (i < words.length - 1 ? ' ' : '');
+          currentContent += word;
+          callbacks.onChunk(word);
+          
+          // Pequeña pausa para simular streaming
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        callbacks.onComplete(fallbackResponse.respuesta, fallbackResponse.conversacion_id);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Error al enviar mensaje: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+      let conversacionId = '';
+
+      if (!reader) {
+        throw new Error('No se pudo obtener el stream de respuesta');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            
+            if (data === '[DONE]') {
+              callbacks.onComplete(fullResponse, conversacionId);
+              return;
+            }
+            
+            try {
+              const parsed = JSON.parse(data);
+              
+              if (parsed.conversacion_id) {
+                conversacionId = parsed.conversacion_id;
+              }
+              
+              if (parsed.content) {
+                fullResponse += parsed.content;
+                callbacks.onChunk(parsed.content);
+              }
+            } catch (e) {
+              // Ignorar líneas que no son JSON válido
+              console.warn('Línea no JSON ignorada:', data);
+            }
+          }
+        }
+      }
+      
+      callbacks.onComplete(fullResponse, conversacionId);
+      
+    } catch (error) {
+      callbacks.onError(error instanceof Error ? error : new Error('Error desconocido'));
+    }
   },
 };
