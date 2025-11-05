@@ -68,15 +68,15 @@ function GastosPage() {
     if (location.state?.importedData) {
       const importedData: ImportedData = location.state.importedData;
       
-      // Preparar datos iniciales para el formulario (solo fecha, monto y categoría)
-      // Descripción y comercio quedan vacíos para que el usuario los complete
+      // Preparar datos iniciales para el formulario
+      // El OCR ahora extrae comercio y genera descripción automática
       const fechaISO = importedData.fecha || new Date().toISOString().split('T')[0];
       const datosOCR = {
         fecha: formatDateToLocal(fechaISO), // Convertir a formato dd/mm/yyyy
         monto: importedData.monto?.toString() || '',
-        descripcion: '', // Vacío - usuario lo completa
-        comercio: '', // Vacío - usuario lo completa
-        id_categoria: importedData.categoria_sugerida?.toString() || '1', // String para el select, default 1
+        descripcion: importedData.concepto || '', // Descripción generada por OCR
+        comercio: importedData.comercio || '', // Comercio extraído por OCR
+        id_categoria: importedData.categoria_sugerida?.toString() || '26', // String para el select, default 26 (Otros)
         fuente: 'importado' // Marcar que viene de OCR
       };
       

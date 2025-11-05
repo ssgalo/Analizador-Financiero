@@ -135,64 +135,105 @@ class TesseractOpenAIService:
         Analiza el texto extraído con GPT-4o-mini para estructurar los datos
         """
         try:
-            prompt = f"""Eres un experto en análisis de recibos y facturas. Analiza el siguiente texto extraído de un documento y devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura:
+            prompt = f"""Eres un experto en análisis de recibos y facturas argentinas. Analiza el siguiente texto extraído de un documento y devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura:
 
 {{
   "fecha": "YYYY-MM-DD",
   "monto": número decimal,
-  "concepto": "descripción detallada y clara del gasto",
-  "comercio": "nombre completo del comercio/empresa",
-  "categoria_sugerida": número del 1-7,
+  "concepto": "",
+  "comercio": "nombre del comercio",
+  "categoria_sugerida": número (1, 2, 3, 4, 28, 30, 26),
   "moneda_codigo": "ARS",
   "confianza": número decimal 0.0-1.0
 }}
 
-Categorías disponibles:
-1 = Alimentos/Supermercado (comida, bebidas, artículos de limpieza, supermercados)
-2 = Transporte (combustible, peajes, transporte público, taxi, estacionamiento)
-3 = Salud (medicamentos, consultas médicas, farmacias, laboratorios)
-4 = Entretenimiento (cine, restaurantes, bares, eventos, streaming, gimnasio)
-5 = Educación (libros, cursos, material escolar, universidad)
-6 = Servicios (luz, gas, agua, internet, teléfono, cable)
-7 = Ropa/Vestimenta (ropa, calzado, accesorios)
+Categorías:
+1 = Comida (restaurantes, fast food, delivery)
+2 = Transporte (combustible, peajes, taxi, Uber)
+3 = Vivienda (alquiler, expensas)
+4 = Entretenimiento (cine, eventos, gimnasio)
+28 = Supermercado (supermercados, almacenes)
+30 = Suscripciones (Netflix, Spotify, servicios online)
+26 = Otros (default si no estás seguro)
 
-Instrucciones IMPORTANTES:
-1. FECHA: Busca la fecha del ticket/factura en el encabezado. Formato YYYY-MM-DD. Si NO encuentras fecha, usa: {datetime.now().strftime("%Y-%m-%d")}
+INSTRUCCIONES CRÍTICAS:
 
-2. MONTO: Busca "TOTAL", "Total a Pagar", "Importe Total", "Monto". Devuelve SOLO el número sin símbolos de moneda ($ ni ,). Ejemplo: 1234.56
+1. FECHA:
+   - Busca en las primeras 10 líneas: "Fecha:", "Date:", o formato DD/MM/YYYY
+   - Si NO encuentras, usa: {datetime.now().strftime("%Y-%m-%d")}
+   - Devuelve en formato: YYYY-MM-DD
 
-3. CONCEPTO: DEJAR VACÍO (""). El usuario completará este campo manualmente.
+2. MONTO:
+   - Busca "TOTAL" cerca del FINAL del documento
+   - FORMATO ARGENTINO: "1.234,56" → convierte a 1234.56
+   - FORMATO ARGENTINO: "25.000,00" → convierte a 25000.00
+   - Devuelve SOLO el número decimal: 1234.56
 
-4. COMERCIO: DEJAR VACÍO (""). El usuario completará este campo manualmente.
+3. COMERCIO (MUY IMPORTANTE - LEE LAS PRIMERAS 2-3 LÍNEAS):
+   - El nombre del comercio SIEMPRE está en las primeras 2-3 líneas del documento
+   - Busca la línea con el texto MÁS GRANDE o que aparece SOLO
+   - Puede estar en MAYÚSCULAS o con formato destacado
+   - Ignora: direcciones, teléfonos, CUIT, "S.A.", "S.R.L."
+   
+   EJEMPLOS:
+   - Si las primeras líneas dicen: "CARREFOUR\nDirección: Av. Corrientes 123"
+     → comercio: "Carrefour"
+   
+   - Si dice: "YPF - ESTACIÓN DE SERVICIO\nCUIT: 30-12345678-9"
+     → comercio: "YPF"
+   
+   - Si dice: "Farmacity\nFarmacia\nTel: 4567-8900"
+     → comercio: "Farmacity"
+   
+   - Devuelve el nombre limpio, sin símbolos raros
+   - Si NO hay nombre claro en las primeras 3 líneas, devuelve ""
 
-5. CATEGORIA_SUGERIDA: Elige el número (1-7) según el tipo de comercio y productos. Si es un supermercado = 1, si es gasolina = 2, etc.
+4. CONCEPTO:
+   - SIEMPRE devuelve cadena VACÍA: ""
+   - NO generes ninguna descripción
+   - El usuario completará este campo manualmente
 
-6. CONFIANZA: Tu nivel de seguridad (0.9-1.0 = muy seguro, 0.7-0.9 = seguro, 0.5-0.7 = moderado, 0.3-0.5 = bajo, <0.3 = muy bajo)
+5. CATEGORIA_SUGERIDA:
+   - Lee el nombre del comercio identificado
+   - DEFAULT: 26 (Otros) si no estás seguro
+   - Usa categorías específicas solo si el comercio es conocido:
+     * Carrefour, Coto, Día, Disco, Jumbo, Walmart → 28
+     * YPF, Shell, Axion, Esso, Puma → 2
+     * McDonald's, Burger King, Mostaza, Pedidos Ya → 1
+     * TODO LO DEMÁS → 26
 
-CRÍTICO: "concepto" y "comercio" deben ser strings VACÍOS (""), NO null. El usuario los completará manualmente.
+6. CONFIANZA:
+   - 0.8-1.0: Comercio + monto identificados
+   - 0.5-0.7: Solo monto identificado
+   - <0.5: Datos parciales
 
-Texto del documento:
-{text}"""
+TEXTO DEL DOCUMENTO:
+{text}
+
+RECUERDA CRÍTICO:
+- Comercio: SOLO en las primeras 2-3 líneas
+- Concepto: SIEMPRE vacío ""
+- Monto: busca "TOTAL" al final"""
 
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",  # Modelo más económico
                 messages=[
                     {
                         "role": "system",
-                        "content": "Eres un asistente que SOLO responde con JSON válido, sin texto adicional."
+                        "content": "Eres un asistente experto en análisis de documentos. SOLO respondes con JSON válido, sin texto adicional, markdown o explicaciones."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                temperature=0.1,  # Baja temperatura para respuestas más consistentes
-                max_tokens=500
+                temperature=0.2,  # Ligeramente más alto para mejor análisis contextual
+                max_tokens=800  # Aumentado para permitir mejor análisis del documento
             )
             
             # Extraer respuesta
             gpt_response = response.choices[0].message.content.strip()
-            logger.info(f"Respuesta de GPT: {gpt_response}")
+            logger.info(f"Respuesta cruda de GPT: {gpt_response}")
             
             # Limpiar respuesta (remover markdown si existe)
             if gpt_response.startswith("```json"):
@@ -206,6 +247,9 @@ Texto del documento:
             
             # Parsear JSON
             data = json.loads(gpt_response)
+            
+            # Log de datos parseados
+            logger.info(f"Datos parseados - Comercio: '{data.get('comercio', '')}', Concepto: '{data.get('concepto', '')}', Monto: {data.get('monto', 0)}")
             
             # Validar estructura
             required_keys = ["fecha", "monto", "concepto", "comercio", "categoria_sugerida", "moneda_codigo", "confianza"]
@@ -221,6 +265,17 @@ Texto del documento:
                 data["confianza"] = float(data["confianza"])
             else:
                 data["confianza"] = 0.5
+            
+            # Asegurar que concepto y comercio sean strings (no null)
+            if data["concepto"] is None:
+                data["concepto"] = ""
+            if data["comercio"] is None:
+                data["comercio"] = ""
+            
+            # Truncar concepto si es muy largo
+            if len(data["concepto"]) > 150:
+                data["concepto"] = data["concepto"][:147] + "..."
+                logger.warning(f"Concepto truncado a 150 caracteres")
             
             return data
             
