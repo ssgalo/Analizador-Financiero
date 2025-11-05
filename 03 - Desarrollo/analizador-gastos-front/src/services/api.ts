@@ -209,10 +209,10 @@ export interface GastoCreate {
   fecha: string;
   monto: number;
   descripcion: string;
-  comercio: string;
-  id_categoria: number;
-  fuente: 'manual' | 'PDF' | 'imagen' | 'MercadoPago' | 'banco';
-  id_usuario: number;
+  comercio?: string;
+  id_categoria?: number;
+  fuente?: 'manual' | 'importado' | 'integracion'; // Valores permitidos en la BD
+  moneda?: string; // Default "ARS"
 }
 
 export interface GastoUpdate {
@@ -221,7 +221,7 @@ export interface GastoUpdate {
   descripcion?: string;
   comercio?: string;
   id_categoria?: number;
-  fuente?: 'manual' | 'PDF' | 'imagen' | 'MercadoPago' | 'banco';
+  estado?: string;
 }
 
 // Servicios de Gastos

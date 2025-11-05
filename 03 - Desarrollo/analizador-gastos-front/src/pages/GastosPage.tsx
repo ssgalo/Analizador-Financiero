@@ -10,8 +10,10 @@
  * - Ver estadísticas resumidas
  */
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { Button } from "../components/ui/button"
+import { formatDateToLocal } from "../utils/formatters"
 import { Plus, RefreshCw } from "lucide-react"
 import { FormularioGasto } from "../components/forms/FormularioGasto"
 import { GastosStats } from "../components/gastos/GastosStats"
@@ -19,6 +21,17 @@ import { GastosTabla } from "../components/gastos/GastosTabla"
 import { ModalEliminarGasto } from "../components/gastos/ModalEliminarGasto"
 import { useGastos } from "../hooks/useGastos"
 import type { Gasto, GastoCreate, GastoUpdate } from "../services/api"
+
+interface ImportedData {
+  fecha: string | null;
+  monto: number | null;
+  concepto: string;
+  comercio: string;
+  categoria_sugerida: number | null;
+  moneda_codigo: string;
+  confianza: number;
+  texto_completo: string;
+}
 
 function GastosPage() {
   // Hook personalizado para gestión de gastos
@@ -43,6 +56,37 @@ function GastosPage() {
   const [eliminando, setEliminando] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [gastoEditar, setGastoEditar] = useState<Gasto | null>(null);
+  const [datosIniciales, setDatosIniciales] = useState<any>(null); // Para datos de OCR
+
+  // Hook para obtener datos de navegación (datos importados desde OCR)
+  const location = useLocation();
+
+  /**
+   * Detecta si hay datos importados desde el OCR y abre el formulario automáticamente
+   */
+  useEffect(() => {
+    if (location.state?.importedData) {
+      const importedData: ImportedData = location.state.importedData;
+      
+      // Preparar datos iniciales para el formulario
+      // El OCR ahora extrae comercio y genera descripción automática
+      const fechaISO = importedData.fecha || new Date().toISOString().split('T')[0];
+      const datosOCR = {
+        fecha: formatDateToLocal(fechaISO), // Convertir a formato dd/mm/yyyy
+        monto: importedData.monto?.toString() || '',
+        descripcion: importedData.concepto || '', // Descripción generada por OCR
+        comercio: importedData.comercio || '', // Comercio extraído por OCR
+        id_categoria: importedData.categoria_sugerida?.toString() || '26', // String para el select, default 26 (Otros)
+        fuente: 'importado' // Marcar que viene de OCR
+      };
+      
+      setDatosIniciales(datosOCR);
+      setMostrarFormulario(true);
+      
+      // Limpiar el estado de navegación para evitar que se reabra al refrescar
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   /**
    * Abre el modal de confirmación de eliminación
@@ -84,7 +128,13 @@ function GastosPage() {
    * @param gastoData - Datos del gasto a crear
    */
   const handleCrearGasto = async (gastoData: GastoCreate) => {
-    await crearGasto(gastoData);
+    console.log('🎯 handleCrearGasto - Datos recibidos:', gastoData);
+    const resultado = await crearGasto(gastoData);
+    
+    if (resultado) {
+      console.log('✅ Gasto creado exitosamente:', resultado);
+      // Ya no necesitamos ajustar filtros - la lista siempre muestra los últimos gastos
+    }
   };
 
   /**
@@ -111,6 +161,7 @@ function GastosPage() {
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
     setGastoEditar(null);
+    setDatosIniciales(null); // Limpiar datos iniciales de OCR
   };
 
   // Mostrar estado de error si hay problemas al cargar
@@ -198,6 +249,7 @@ function GastosPage() {
         onUpdate={handleActualizarGasto}
         categorias={categorias}
         gastoEditar={gastoEditar}
+        datosIniciales={datosIniciales}
         isLoading={isLoading}
       />
     </div>
