@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { gastosService, categoriasService, authService } from '../services/api';
 import type { Gasto, Categoria } from '../services/api';
 import { CATEGORIAS_GASTOS, filtrarCategorias, obtenerCategoriasFaltantes } from '../utils/categoryHelpers';
-import { getRangoMesActual } from '../utils/dateHelpers';
 
 /**
  * Interfaz para los filtros de gastos
@@ -117,37 +116,27 @@ export const useGastos = (): UseGastosReturn => {
         return;
       }
 
-      // Calcular fechas del mes actual utilizando utilidades
-      const rangoMesActual = getRangoMesActual();
-      const fechaActual = new Date();
-      const añoActual = fechaActual.getFullYear();
-      const mesActual = fechaActual.getMonth() + 1;
-      
-      console.log('📅 Debug Fechas - Mes actual:', {
-        fechaActual: fechaActual.toISOString(),
-        añoActual,
-        mesActual,
-        rangoCalculado: rangoMesActual
-      });
-
       // Preparar filtros para la API
+      // Por defecto: traer los últimos 50 gastos sin filtro de fecha
       const filtrosAPI: any = {
         id_usuario: user.id_usuario,
-        fecha_desde: rangoMesActual.fechaDesde,
-        fecha_hasta: rangoMesActual.fechaHasta,
-        limit: 1000 // Límite alto para obtener todos los gastos del mes
+        limit: 50 // Traer los últimos 50 gastos por defecto
       };
 
-      // Aplicar filtros adicionales del usuario (sobrescriben el rango del mes si están definidos)
+      // Aplicar filtros del usuario si están definidos
       if (filtros.categoria) {
         filtrosAPI.id_categoria = filtros.categoria;
       }
+      
+      // Solo aplicar filtros de fecha si el usuario los definió explícitamente
       if (filtros.fecha_desde && filtros.fecha_desde.trim()) {
         filtrosAPI.fecha_desde = filtros.fecha_desde;
       }
       if (filtros.fecha_hasta && filtros.fecha_hasta.trim()) {
         filtrosAPI.fecha_hasta = filtros.fecha_hasta;
       }
+
+      console.log('📅 Debug Filtros API:', filtrosAPI);
 
       // Cargar gastos y categorías desde la API
       const [gastosData, categoriasData] = await Promise.all([
@@ -322,16 +311,15 @@ export const useGastos = (): UseGastosReturn => {
         throw new Error('Usuario no autenticado');
       }
 
-      // Agregar el ID del usuario al gasto
-      const gastoCompleto = {
-        ...gastoData,
-        id_usuario: user.id_usuario
-      };
-
-      const gastoCreado = await gastosService.createGasto(gastoCompleto);
+      // NO agregar id_usuario - el backend lo toma del token JWT
+      console.log('📤 useGastos - Creando gasto:', gastoData);
+      const gastoCreado = await gastosService.createGasto(gastoData);
+      console.log('✅ useGastos - Gasto creado:', gastoCreado);
       await cargarDatos();
+      console.log('🔄 useGastos - Datos recargados');
       return gastoCreado;
     } catch (err) {
+      console.error('❌ useGastos - Error al crear gasto:', err);
       setError(err instanceof Error ? err.message : 'Error al crear gasto');
       return null;
     }

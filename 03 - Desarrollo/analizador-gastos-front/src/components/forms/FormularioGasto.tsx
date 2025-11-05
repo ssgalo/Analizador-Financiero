@@ -18,6 +18,7 @@ interface FormularioGastoProps {
   onUpdate?: (id: number, gasto: GastoUpdate) => Promise<void>
   categorias: Categoria[]
   gastoEditar?: Gasto | null
+  datosIniciales?: Partial<FormData> & { fuente?: string } // Para datos de OCR u otros orígenes
   isLoading?: boolean
 }
 
@@ -44,6 +45,7 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
   onUpdate,
   categorias,
   gastoEditar,
+  datosIniciales,
   isLoading = false
 }) => {
   const { getHoverStyles } = useColors()
@@ -57,11 +59,13 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
     comercio: '',
     id_categoria: ''
   })
+  
+  const [fuenteOrigen, setFuenteOrigen] = useState<string>('manual') // Guardar fuente del origen
 
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Llenar formulario cuando se edita un gasto
+  // Llenar formulario cuando se edita un gasto o cuando hay datos iniciales (OCR)
   useEffect(() => {
     if (gastoEditar) {
       setFormData({
@@ -71,6 +75,17 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
         comercio: gastoEditar.comercio,
         id_categoria: gastoEditar.id_categoria.toString()
       })
+      setFuenteOrigen(gastoEditar.fuente || 'manual')
+    } else if (datosIniciales) {
+      // Prellenar con datos iniciales (ej: OCR)
+      setFormData({
+        fecha: datosIniciales.fecha || formatDateToLocal(getCurrentDateISO()),
+        monto: datosIniciales.monto || '',
+        descripcion: datosIniciales.descripcion || '', // Vacío para que el usuario lo complete
+        comercio: datosIniciales.comercio || '', // Vacío para que el usuario lo complete
+        id_categoria: datosIniciales.id_categoria || ''
+      })
+      setFuenteOrigen(datosIniciales.fuente || 'manual')
     } else {
       // Resetear formulario para nuevo gasto
       setFormData({
@@ -80,9 +95,10 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
         comercio: '',
         id_categoria: ''
       })
+      setFuenteOrigen('manual')
     }
     setErrors({})
-  }, [gastoEditar, isOpen])
+  }, [gastoEditar, datosIniciales, isOpen])
 
   const opcionesCategorias = [
     { value: '', label: 'Selecciona una categoría' },
@@ -173,29 +189,34 @@ const FormularioGasto: React.FC<FormularioGastoProps> = ({
       }
 
       console.log('💾 Guardando gasto para usuario:', user.nombre, '- ID:', user.id_usuario);
+      console.log('🔍 gastoEditar:', gastoEditar);
+      console.log('🔍 onUpdate:', onUpdate);
+      console.log('🔍 Modo:', gastoEditar && onUpdate ? 'ACTUALIZAR' : 'CREAR');
 
-      if (gastoEditar && onUpdate) {
-        // Actualizar gasto existente
+      if (gastoEditar && gastoEditar.id_gasto && onUpdate) {
+        // Actualizar gasto existente (solo si tiene id_gasto)
+        console.log('📝 MODO ACTUALIZAR - ID:', gastoEditar.id_gasto);
         const gastoUpdate: GastoUpdate = {
           fecha: formatDateToISO(formData.fecha),
           monto: parseLocalNumber(formData.monto),
           descripcion: formData.descripcion.trim(),
           comercio: formData.comercio.trim(),
           id_categoria: parseInt(formData.id_categoria),
-          fuente: 'manual'
         };
         await onUpdate(gastoEditar.id_gasto, gastoUpdate);
       } else {
         // Crear nuevo gasto
+        console.log('✨ MODO CREAR');
         const nuevoGasto: GastoCreate = {
-          id_usuario: user.id_usuario,
           fecha: formatDateToISO(formData.fecha),
           monto: parseLocalNumber(formData.monto),
           descripcion: formData.descripcion.trim(),
           comercio: formData.comercio.trim(),
           id_categoria: parseInt(formData.id_categoria),
-          fuente: 'manual'
+          fuente: fuenteOrigen as 'manual' | 'importado' | 'integracion', // Usar fuente guardada (ej: 'importado' para OCR)
+          moneda: 'ARS'
         };
+        console.log('📤 Enviando gasto:', nuevoGasto);
         await onSubmit(nuevoGasto);
       }
 

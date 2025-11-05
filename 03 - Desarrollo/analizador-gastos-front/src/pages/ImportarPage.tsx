@@ -1,7 +1,10 @@
-import { useState, useRef } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
-import { Button } from "../components/ui/button"
-import { Upload, FileText, Image, AlertCircle, CheckCircle } from "lucide-react"
+﻿import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { FileText, Image, AlertCircle, CheckCircle, FileUp, Sparkles } from "lucide-react";
+import ImportFileModal from "../components/ImportFileModal";
+import { useImportGasto, ImportedGastoData } from "../hooks/useImportGasto";
 
 const uploadHistory = [
   {
@@ -17,140 +20,137 @@ const uploadHistory = [
     id: 2,
     fileName: "ticket_supermercado.jpg",
     type: "Imagen",
-    status: "procesando",
+    status: "procesado",
     date: "2024-01-14",
-    gastos: null,
-    monto: null,
+    gastos: 1,
+    monto: 8750,
   },
   {
     id: 3,
     fileName: "factura_luz.pdf",
     type: "PDF",
-    status: "error",
+    status: "procesado",
     date: "2024-01-13",
-    gastos: null,
-    monto: null,
+    gastos: 1,
+    monto: 12500,
   },
-]
+];
 
 export default function ImportarPage() {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const { isImportModalOpen, openImportModal, closeImportModal, handleDataExtracted } = useImportGasto();
+  const [processingStatus, setProcessingStatus] = useState<string>("");
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    handleFiles(files);
-  };
-
-  const handleFiles = (files: File[]) => {
-    const validFiles = files.filter(file => {
-      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      return validTypes.includes(file.type) && file.size <= maxSize;
-    });
-
-    setSelectedFiles(prev => [...prev, ...validFiles]);
-
-    // Mostrar advertencia si algunos archivos fueron filtrados
-    if (validFiles.length < files.length) {
-      alert("Algunos archivos fueron omitidos por no cumplir con los requisitos (tipo o tamaño)");
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(event.dataTransfer.files);
-    handleFiles(files);
+  const handleImportComplete = (data: ImportedGastoData) => {
+    handleDataExtracted(data);
+    setProcessingStatus("success");
+    
+    setTimeout(() => {
+      navigate('/gastos', { state: { importedData: data } });
+    }, 1000);
   };
 
   return (
     <div className="p-6 bg-background min-h-full">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Importar Gastos</h1>
-          <p className="text-gray-600">Sube archivos PDF o imágenes para extraer automáticamente tus gastos</p>
+          <div className="flex items-center space-x-2 mb-2">
+            <h1 className="text-3xl font-bold text-foreground">Importar Gastos</h1>
+            <Sparkles className="w-6 h-6 text-blue-500" />
+          </div>
+          <p className="text-gray-600">
+            Sube facturas, recibos o tickets y nuestra IA extraerá automáticamente la información
+          </p>
         </div>
 
-        {/* Upload Area */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Subir Archivos</CardTitle>
-            <CardDescription>
-              Arrastra y suelta archivos aquí, o haz clic para seleccionar. Soportamos PDF, JPG, PNG.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`border-2 border-dashed ${
-                isDragging ? 'border-teal bg-teal/5' : 'border-gray-300'
-              } rounded-lg p-12 text-center hover:border-teal transition-colors`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
-                {isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos aquí'}
+        <Card className="mb-8 border-2 border-dashed hover:border-blue-400 transition-colors">
+          <CardContent className="py-12">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <FileUp className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Importa tu primer documento</h3>
+              <p className="text-gray-600 mb-6">
+                Con Tesseract OCR + OpenAI procesamos tus documentos en segundos
               </p>
-              <p className="text-gray-500 mb-4">o</p>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                multiple
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
               <Button 
-                className="bg-teal hover:bg-teal/90"
-                onClick={() => fileInputRef.current?.click()}
+                className="bg-teal hover:bg-teal/90 text-white px-8 py-6 text-lg"
+                onClick={openImportModal}
               >
-                Seleccionar Archivos
+                <FileUp className="mr-2 h-5 w-5" />
+                Subir Documento
               </Button>
-              <p className="text-xs text-gray-500 mt-4">
-                Máximo 10MB por archivo • PDF, JPG, PNG permitidos
-              </p>
-              {selectedFiles.length > 0 && (
-                <div className="mt-4 text-left">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Archivos seleccionados:</p>
-                  <ul className="space-y-1">
-                    {selectedFiles.map((file, index) => (
-                      <li key={index} className="text-sm text-gray-600">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </li>
-                    ))}
-                  </ul>
+              
+              {processingStatus === "success" && (
+                <div className="mt-4 text-green-600 font-medium">
+                  ¡Documento procesado! Redirigiendo...
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Upload History */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium mb-1">IA Avanzada</h4>
+                  <p className="text-sm text-gray-600">
+                    OpenAI GPT-4o-mini extrae fecha, monto y concepto automáticamente
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium mb-1">Múltiples Formatos</h4>
+                  <p className="text-sm text-gray-600">
+                    Soporta JPG, PNG, PDF y más
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium mb-1">Rápido y Preciso</h4>
+                  <p className="text-sm text-gray-600">
+                    Procesa documentos en segundos con alta precisión
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle>Historial de Importaciones</CardTitle>
-            <CardDescription>Archivos subidos recientemente y su estado de procesamiento</CardDescription>
+            <CardDescription>Documentos procesados recientemente</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {uploadHistory.map((upload) => (
                 <div
                   key={upload.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border"
+                  className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -167,7 +167,6 @@ export default function ImportarPage() {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    {/* Status */}
                     <div className="flex items-center space-x-2">
                       {upload.status === "procesado" && (
                         <>
@@ -189,24 +188,22 @@ export default function ImportarPage() {
                       )}
                     </div>
 
-                    {/* Results */}
                     {upload.status === "procesado" && (
                       <div className="text-right">
-                        <p className="text-sm font-medium">{upload.gastos} gastos</p>
+                        <p className="text-sm font-medium">{upload.gastos} {upload.gastos === 1 ? 'gasto' : 'gastos'}</p>
                         <p className="text-sm text-gray-500">${upload.monto?.toLocaleString()}</p>
                       </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex space-x-2">
                       {upload.status === "procesado" && (
-                        <Button variant="outline" size="sm" className="hover:bg-gray-100 transition-colors duration-200">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="hover:bg-gray-100 transition-colors duration-200"
+                          onClick={() => navigate('/gastos')}
+                        >
                           Ver Gastos
-                        </Button>
-                      )}
-                      {upload.status === "error" && (
-                        <Button variant="outline" size="sm" className="hover:bg-gray-100 transition-colors duration-200">
-                          Reintentar
                         </Button>
                       )}
                     </div>
@@ -217,33 +214,39 @@ export default function ImportarPage() {
           </CardContent>
         </Card>
 
-        {/* Instructions */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Consejos para mejores resultados</CardTitle>
+            <CardTitle>💡 Consejos para mejores resultados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
-                <h4 className="font-medium">Para PDFs:</h4>
+                <h4 className="font-medium">📄 Para PDFs:</h4>
                 <ul className="space-y-1 text-gray-600">
-                  <li>• Usa archivos de buena calidad</li>
-                  <li>• Resúmenes de tarjetas funcionan mejor</li>
-                  <li>• Evita archivos escaneados de baja resolución</li>
+                  <li>• Facturas y recibos digitales funcionan mejor</li>
+                  <li>• Asegúrate de que el texto sea seleccionable</li>
+                  <li>• Máximo 20MB por archivo</li>
                 </ul>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium">Para Imágenes:</h4>
+                <h4 className="font-medium">📸 Para Imágenes:</h4>
                 <ul className="space-y-1 text-gray-600">
                   <li>• Fotografía con buena iluminación</li>
                   <li>• Asegúrate de que el texto sea legible</li>
-                  <li>• Tickets y facturas son ideales</li>
+                  <li>• Evita sombras y reflejos</li>
+                  <li>• Toma la foto desde arriba, directamente</li>
                 </ul>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <ImportFileModal
+        isOpen={isImportModalOpen}
+        onClose={closeImportModal}
+        onDataExtracted={handleImportComplete}
+      />
     </div>
-  )
+  );
 }

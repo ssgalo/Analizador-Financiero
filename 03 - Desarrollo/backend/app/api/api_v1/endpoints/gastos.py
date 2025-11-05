@@ -9,11 +9,12 @@ Este módulo proporciona endpoints REST para:
 - Eliminar gastos
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from typing import List, Optional
 from decimal import Decimal
+import logging
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.gasto import Gasto
@@ -21,8 +22,10 @@ from app.models.moneda import Moneda
 from app.models.categoria import Categoria
 from app.models.usuario import Usuario
 from app.schemas.gasto import GastoCreate, GastoUpdate, GastoResponse, GastoStats
+from app.services.tesseract_openai_service import get_ocr_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/", response_model=GastoResponse, status_code=status.HTTP_201_CREATED)
 def create_gasto(
@@ -285,5 +288,88 @@ def delete_gasto(
     db.delete(db_gasto)
     db.commit()
     return db_gasto
+
+
+@router.post("/import-file", status_code=status.HTTP_200_OK)
+async def import_gasto_from_file(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    """
+    Importar un gasto desde un archivo (imagen, PDF, etc.)
+    
+    Procesa archivos usando Azure AI Document Intelligence para extraer
+    automáticamente información de facturas, recibos y otros documentos.
+    
+    Args:
+        file: Archivo subido (JPG, PNG, PDF, etc.)
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        Dict con los datos extraídos del documento:
+        - fecha: Fecha del gasto (YYYY-MM-DD)
+        - monto: Monto del gasto
+        - concepto: Descripción/concepto
+        - categoria_sugerida: ID de categoría sugerida (opcional)
+        - moneda_codigo: Código de moneda (ej: ARS)
+        - confianza: Nivel de confianza (0.0 a 1.0)
+        - texto_completo: Texto completo extraído
+        
+    Raises:
+        HTTPException 400: Si el archivo no es válido
+        HTTPException 500: Si hay un error procesando el archivo
+        
+    Example:
+        POST /api/v1/gastos/import-file
+        Content-Type: multipart/form-data
+        file: [archivo binario]
+    """
+    try:
+        logger.info(f"Usuario {current_user.id_usuario} importando archivo: {file.filename}")
+        
+        # Leer contenido del archivo
+        file_bytes = await file.read()
+        
+        # Obtener servicio OCR
+        ocr_service = get_ocr_service()
+        
+        # Validar archivo
+        is_valid, error_message = await ocr_service.validate_file(file_bytes, file.filename)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_message
+            )
+        
+        # Procesar documento
+        extracted_data = await ocr_service.process_receipt(file_bytes, file.filename)
+        
+        # Validar que se extrajo información mínima
+        if not extracted_data.get("monto") and not extracted_data.get("fecha"):
+            logger.warning(f"No se pudo extraer información útil del archivo: {file.filename}")
+            return {
+                "success": False,
+                "message": "No se pudo extraer información del documento. Por favor, ingrese los datos manualmente.",
+                "data": extracted_data
+            }
+        
+        logger.info(f"Archivo procesado exitosamente: {file.filename}")
+        
+        return {
+            "success": True,
+            "message": "Documento procesado correctamente",
+            "data": extracted_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error procesando archivo {file.filename}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error procesando el archivo: {str(e)}"
+        )
 
 #agrego restriccion a todos los endpoints de gastos para que siempre trabajen con el usuario logueado
