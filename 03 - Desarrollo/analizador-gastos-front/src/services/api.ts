@@ -495,4 +495,102 @@ export const ingresosService = {
   }
 };
 
+// Tipos para Objetivos Financieros
+export interface ObjetivoFinanciero {
+  id_objetivo?: number;
+  id_usuario: number;
+  descripcion: string;
+  monto: number;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  estado: 'en_progreso' | 'completado' | 'cancelado';
+}
+
+export interface ObjetivoFinancieroCreate {
+  id_usuario: number;
+  descripcion: string;
+  monto: number;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  estado?: 'en_progreso' | 'completado' | 'cancelado';
+}
+
+export interface ObjetivoFinancieroUpdate {
+  descripcion?: string;
+  monto?: number;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  estado?: 'en_progreso' | 'completado' | 'cancelado';
+}
+
+// Servicios de Objetivos Financieros
+export const objetivosService = {
+  // Obtener lista de objetivos con filtros
+  async getObjetivos(filtros?: {
+    skip?: number;
+    limit?: number;
+    id_usuario?: number;
+    estado?: string;
+  }): Promise<ObjetivoFinanciero[]> {
+    console.log('🎯 objetivosService.getObjetivos llamado con filtros:', filtros);
+    
+    const params = new URLSearchParams();
+    if (filtros?.skip !== undefined) params.append('skip', filtros.skip.toString());
+    if (filtros?.limit !== undefined) params.append('limit', filtros.limit.toString());
+    if (filtros?.id_usuario !== undefined) params.append('id_usuario', filtros.id_usuario.toString());
+    if (filtros?.estado) params.append('estado', filtros.estado);
+
+    const queryString = params.toString();
+    const url = `/objetivos-financieros/${queryString ? '?' + queryString : ''}`;
+    
+    console.log('🌐 Haciendo petición GET a:', url);
+    
+    try {
+      const response = await apiClient.get<ObjetivoFinanciero[]>(url);
+      console.log('✅ Respuesta objetivos recibida:', response.data.length, 'objetivos');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error en objetivosService.getObjetivos:', error);
+      throw error;
+    }
+  },
+
+  // Obtener un objetivo por ID
+  async getObjetivo(id: number): Promise<ObjetivoFinanciero> {
+    console.log('🎯 objetivosService.getObjetivo llamado con id:', id);
+    const response = await apiClient.get<ObjetivoFinanciero>(`/objetivos-financieros/${id}`);
+    return response.data;
+  },
+
+  // Crear un nuevo objetivo
+  async createObjetivo(objetivo: ObjetivoFinancieroCreate): Promise<ObjetivoFinanciero> {
+    console.log('🎯 objetivosService.createObjetivo llamado con:', objetivo);
+    const response = await apiClient.post<ObjetivoFinanciero>('/objetivos-financieros/', objetivo);
+    console.log('✅ Objetivo creado:', response.data);
+    return response.data;
+  },
+
+  // Actualizar un objetivo
+  async updateObjetivo(id: number, objetivo: ObjetivoFinancieroUpdate): Promise<ObjetivoFinanciero> {
+    console.log('🎯 objetivosService.updateObjetivo llamado con id:', id, 'data:', objetivo);
+    const response = await apiClient.put<ObjetivoFinanciero>(`/objetivos-financieros/${id}`, objetivo);
+    console.log('✅ Objetivo actualizado:', response.data);
+    return response.data;
+  },
+
+  // Eliminar un objetivo
+  async deleteObjetivo(id: number): Promise<void> {
+    console.log('🎯 objetivosService.deleteObjetivo llamado con id:', id);
+    await apiClient.delete(`/objetivos-financieros/${id}`);
+    console.log('✅ Objetivo eliminado');
+  },
+
+  // Obtener objetivos activos de un usuario
+  async getObjetivosActivos(userId: number): Promise<ObjetivoFinanciero[]> {
+    console.log('🎯 objetivosService.getObjetivosActivos llamado para usuario:', userId);
+    const response = await apiClient.get<ObjetivoFinanciero[]>(`/objetivos-financieros/usuario/${userId}/activos`);
+    return response.data;
+  }
+};
+
 export default apiClient;
