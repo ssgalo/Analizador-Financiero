@@ -71,7 +71,7 @@ export default function ImportarPage() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Importa tu primer documento</h3>
               <p className="text-gray-600 mb-6">
-                Con Tesseract OCR + OpenAI procesamos tus documentos en segundos
+                Con OpenAI Vision analizamos tus documentos con precisión en segundos
               </p>
               <Button 
                 className="bg-teal hover:bg-teal/90 text-white px-8 py-6 text-lg"
