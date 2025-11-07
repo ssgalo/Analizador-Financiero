@@ -116,10 +116,14 @@ export function ChangePasswordModal({ onClose }: ChangePasswordModalProps) {
             <input
               type="password"
               id="contraseña_nueva"
+              name="new-password"
               value={formData.contraseña_nueva}
               onChange={(e) => setFormData({ ...formData, contraseña_nueva: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Ingresa tu nueva contraseña"
+              autoComplete="new-password"
+              data-lpignore="true"
+              data-form-type="other"
               disabled={loading}
             />
             <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
@@ -133,10 +137,14 @@ export function ChangePasswordModal({ onClose }: ChangePasswordModalProps) {
             <input
               type="password"
               id="confirmar_contraseña"
+              name="confirm-new-password"
               value={formData.confirmar_contraseña}
               onChange={(e) => setFormData({ ...formData, confirmar_contraseña: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Confirma tu nueva contraseña"
+              autoComplete="new-password"
+              data-lpignore="true"
+              data-form-type="other"
               disabled={loading}
             />
           </div>
