@@ -15,6 +15,8 @@ class Usuario(Base):
     preferencias = Column(Text, nullable=True)
     ultimo_login = Column(DateTime(timezone=True), nullable=True)
     estado = Column(String(20), CheckConstraint("estado IN ('activo', 'inactivo', 'pendiente')"), nullable=False)
+    reset_token = Column(String(255), nullable=True)
+    reset_token_expiry = Column(DateTime(timezone=True), nullable=True)
     
     # Relaciones
     categorias = relationship("Categoria", back_populates="usuario", cascade="all, delete-orphan")
