@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 from app.api.deps import get_db, get_current_active_user
@@ -61,6 +61,78 @@ def read_usuarios(
     usuarios = db.query(Usuario).order_by(Usuario.id_usuario).offset(skip).limit(limit).all()
     return usuarios
 
+# IMPORTANTE: /me debe estar ANTES de /{usuario_id} para evitar conflictos de ruteo
+@router.put("/me")
+async def update_mi_perfil(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    """Actualizar el perfil del usuario actual"""
+    import json
+    
+    print("🔍🔍🔍 " + "=" * 80)
+    print("🔍🔍🔍 ENDPOINT /me EJECUTADO!")
+    
+    # Leer el body manualmente
+    try:
+        body_bytes = await request.body()
+        body_str = body_bytes.decode('utf-8')
+        data = json.loads(body_str)
+        print(f"🔍 Datos recibidos: {data}")
+        print(f"🔍 Tipos: {[(k, type(v).__name__) for k, v in data.items()]}")
+    except Exception as e:
+        print(f"🔍 Error leyendo body: {e}")
+        raise HTTPException(status_code=400, detail=f"Error al leer datos: {str(e)}")
+    
+    # Crear diccionario con solo los campos permitidos
+    update_data = {}
+    if 'nombre' in data:
+        update_data['nombre'] = str(data['nombre'])
+    if 'email' in data:
+        update_data['email'] = str(data['email'])
+    if 'usuario' in data:
+        update_data['usuario'] = str(data['usuario'])
+    
+    print(f"🔍 update_data: {update_data}")
+    
+    # Validar que haya al menos un campo para actualizar
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+    
+    # Validar unicidad de email si se está actualizando
+    if 'email' in update_data and update_data['email'] != current_user.email:
+        existing_email = db.query(Usuario).filter(Usuario.email == update_data['email']).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="El email ya está en uso")
+    
+    # Validar unicidad de usuario si se está actualizando
+    if 'usuario' in update_data and update_data['usuario'] != current_user.usuario:
+        existing_usuario = db.query(Usuario).filter(Usuario.usuario == update_data['usuario']).first()
+        if existing_usuario:
+            raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
+    
+    # Actualizar campos
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+    
+    try:
+        db.commit()
+        db.refresh(current_user)
+        print(f"🔍 Usuario actualizado exitosamente: {current_user.usuario}")
+    except Exception as e:
+        db.rollback()
+        print(f"🔍 Error al guardar: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al guardar cambios: {str(e)}")
+    
+    return {
+        "id_usuario": current_user.id_usuario,
+        "nombre": current_user.nombre,
+        "email": current_user.email,
+        "usuario": current_user.usuario,
+        "estado": current_user.estado
+    }
+
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 def read_usuario(
     usuario_id: int,
@@ -106,30 +178,76 @@ def delete_usuario(
     db.commit()
     return usuario
 
-@router.put("/me", response_model=UsuarioResponse)
-def update_mi_perfil(
-    usuario_in: UsuarioUpdate,
+@router.put("/me")
+async def update_mi_perfil(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Actualizar el perfil del usuario actual"""
-    update_data = usuario_in.dict(exclude_unset=True)
+    import json
     
-    # No permitir cambiar el nombre de usuario ni el email
-    if 'usuario' in update_data:
-        del update_data['usuario']
-    if 'email' in update_data:
-        del update_data['email']
-    if 'contraseña' in update_data:
-        del update_data['contraseña']
+    print("🔍🔍🔍 " + "=" * 80)
+    print("🔍🔍🔍 ENDPOINT /me EJECUTADO!")
     
+    # Leer el body manualmente
+    try:
+        body_bytes = await request.body()
+        body_str = body_bytes.decode('utf-8')
+        data = json.loads(body_str)
+        print(f"🔍 Datos recibidos: {data}")
+        print(f"🔍 Tipos: {[(k, type(v).__name__) for k, v in data.items()]}")
+    except Exception as e:
+        print(f"🔍 Error leyendo body: {e}")
+        raise HTTPException(status_code=400, detail=f"Error al leer datos: {str(e)}")
+    
+    # Crear diccionario con solo los campos permitidos
+    update_data = {}
+    if 'nombre' in data:
+        update_data['nombre'] = str(data['nombre'])
+    if 'email' in data:
+        update_data['email'] = str(data['email'])
+    if 'usuario' in data:
+        update_data['usuario'] = str(data['usuario'])
+    
+    print(f"🔍 update_data: {update_data}")
+    
+    # Validar que haya al menos un campo para actualizar
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+    
+    # Validar unicidad de email si se está actualizando
+    if 'email' in update_data and update_data['email'] != current_user.email:
+        existing_email = db.query(Usuario).filter(Usuario.email == update_data['email']).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="El email ya está en uso")
+    
+    # Validar unicidad de usuario si se está actualizando
+    if 'usuario' in update_data and update_data['usuario'] != current_user.usuario:
+        existing_usuario = db.query(Usuario).filter(Usuario.usuario == update_data['usuario']).first()
+        if existing_usuario:
+            raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
+    
+    # Actualizar campos
     for field, value in update_data.items():
         setattr(current_user, field, value)
     
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    try:
+        db.commit()
+        db.refresh(current_user)
+        print(f"🔍 Usuario actualizado exitosamente: {current_user.usuario}")
+    except Exception as e:
+        db.rollback()
+        print(f"🔍 Error al guardar: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al guardar cambios: {str(e)}")
+    
+    return {
+        "id_usuario": current_user.id_usuario,
+        "nombre": current_user.nombre,
+        "email": current_user.email,
+        "usuario": current_user.usuario,
+        "estado": current_user.estado
+    }
 
 @router.post("/cambiar-contraseña")
 def cambiar_contraseña(
