@@ -64,20 +64,31 @@ apiClient.interceptors.response.use(
   (error) => {
     // Si el token expira o es inválido
     if (error.response?.status === 401) {
-      // Limpiar localStorage
-      localStorage.removeItem(import.meta.env.VITE_TOKEN_KEY || 'auth_token');
-      localStorage.removeItem(import.meta.env.VITE_USER_KEY || 'user_info');
+      // Obtener la URL de la petición
+      const requestUrl = error.config?.url || '';
       
-      console.log('🔒 Token expirado detectado por interceptor');
+      // NO mostrar mensaje de sesión expirada si es un error de login/registro
+      const isAuthEndpoint = requestUrl.includes('/auth/login') || 
+                            requestUrl.includes('/auth/register') ||
+                            requestUrl.includes('/auth/');
       
-      // Notificar al store sobre la expiración del token
-      // Usar un evento personalizado para evitar dependencias circulares
-      window.dispatchEvent(new CustomEvent('token-expired', {
-        detail: { 
-          message: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
-          reason: 'token_expired'
-        }
-      }));
+      if (!isAuthEndpoint) {
+        // Solo limpiar localStorage y mostrar notificación si NO es un endpoint de autenticación
+        localStorage.removeItem(import.meta.env.VITE_TOKEN_KEY || 'auth_token');
+        localStorage.removeItem(import.meta.env.VITE_USER_KEY || 'user_info');
+        
+        console.log('🔒 Token expirado detectado por interceptor');
+        
+        // Notificar al store sobre la expiración del token
+        window.dispatchEvent(new CustomEvent('token-expired', {
+          detail: { 
+            message: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+            reason: 'token_expired'
+          }
+        }));
+      } else {
+        console.log('🔐 Error 401 en endpoint de autenticación - no es sesión expirada');
+      }
     }
     return Promise.reject(error);
   }

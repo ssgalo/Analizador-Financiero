@@ -7,6 +7,7 @@ import SessionExpiredNotification from './components/auth/SessionExpiredNotifica
 
 // Páginas
 import AuthPage from './pages/AuthPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import Home from './pages/Home';
 import GastosPage from './pages/GastosPage';
 import IngresosPage from './pages/IngresosPage';
@@ -33,8 +34,9 @@ const App: React.FC = () => {
     <Router>
       <div className="App">
         <Routes>
-          {/* Ruta pública - Login/Register */}
+          {/* Rutas públicas - Login/Register/Reset */}
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* Rutas protegidas */}
           <Route path="/" element={

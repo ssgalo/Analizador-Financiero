@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { LoginRequest, RegisterRequest } from '../services/api';
 import logoApp from '../assets/logoAPP.png';
+import RecoverPasswordModal from '../components/auth/RecoverPasswordModal';
 
 const AuthPage: React.FC = () => {
   const { login, register, isAuthenticated, isLoading, clearSessionExpired } = useAuthStore();
@@ -15,6 +16,7 @@ const AuthPage: React.FC = () => {
   });
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecoverModalOpen, setIsRecoverModalOpen] = useState(false);
 
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
@@ -182,7 +184,7 @@ const AuthPage: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="contraseña" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="contraseña" className="block text-sm font-medium text-gray-700 mb-1">
                 Contraseña
               </label>
               <input
@@ -195,6 +197,15 @@ const AuthPage: React.FC = () => {
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="••••••••"
               />
+              {isLoginMode && (
+                <button
+                  type="button"
+                  onClick={() => setIsRecoverModalOpen(true)}
+                  className="mt-1 text-xs text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
               {!isLoginMode && (
                 <p className="mt-1 text-xs text-gray-500">
                   8-32 caracteres, debe incluir mayúsculas, minúsculas, números y símbolos
@@ -250,6 +261,12 @@ const AuthPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de recuperación de contraseña */}
+      <RecoverPasswordModal 
+        isOpen={isRecoverModalOpen}
+        onClose={() => setIsRecoverModalOpen(false)}
+      />
     </div>
   );
 };

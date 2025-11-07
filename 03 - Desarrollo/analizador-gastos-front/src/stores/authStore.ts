@@ -17,6 +17,7 @@ interface AuthState {
   logout: (showMessage?: boolean) => void;
   forceLogout: () => void;
   refreshUser: () => Promise<void>;
+  updateUser: (updatedData: Partial<User>) => void;
   setLoading: (loading: boolean) => void;
   checkTokenExpiry: () => boolean;
   clearSessionExpired: () => void;
@@ -257,6 +258,16 @@ export const useAuthStore = create<AuthState>()(
           } else {
             get().logout(false);
           }
+        }
+      },
+
+      // Acción: Actualizar datos del usuario sin recargar
+      updateUser: (updatedData: Partial<User>) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          const updatedUser = { ...currentUser, ...updatedData };
+          set({ user: updatedUser });
+          console.log('✅ Usuario actualizado en el store:', updatedUser);
         }
       },
 
