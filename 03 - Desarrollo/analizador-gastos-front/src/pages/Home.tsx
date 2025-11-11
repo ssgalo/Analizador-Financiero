@@ -42,6 +42,16 @@ const Home: React.FC = () => {
     refreshData 
   } = useDashboard();
 
+  // Obtener nombre del mes actual
+  const getNombreMesActual = (): string => {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const mesActual = new Date().getMonth();
+    return meses[mesActual];
+  };
+
   // Estado de carga
   if (isLoading) {
     return (
@@ -119,7 +129,7 @@ const Home: React.FC = () => {
               </div>
               <p className="text-xs text-gray-600">
                 {totalGastos > 0 ? (
-                  <span className="text-coral">Mes actual</span>
+                  <span className="text-coral">{getNombreMesActual()}</span>
                 ) : (
                   <span className="text-gray-500">Sin gastos registrados</span>
                 )}
@@ -142,7 +152,7 @@ const Home: React.FC = () => {
               </div>
               <p className="text-xs text-gray-600">
                 {totalIngresos > 0 ? (
-                  <span className="text-teal">Mes actual</span>
+                  <span className="text-teal">{getNombreMesActual()}</span>
                 ) : (
                   <span className="text-gray-500">Sin ingresos registrados</span>
                 )}

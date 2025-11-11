@@ -56,6 +56,7 @@ export const CATEGORY_COLORS = {
   entretenimiento: '#EF5B5B',
   compras: '#13505B',
   salud: '#A78BFA',
+  saludycuidadopersonal: '#10b981',
   educacion: '#F59E0B',
   servicios: '#8B5CF6',
   default: '#666666'

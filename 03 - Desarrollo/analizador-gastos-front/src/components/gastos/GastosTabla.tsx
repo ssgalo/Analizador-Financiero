@@ -27,6 +27,7 @@ const iconMap: { [key: string]: any } = {
   'Entretenimiento': Smartphone,
   'Compras': ShoppingCart,
   'Salud': Heart,
+  'Salud y cuidado personal': Heart,
   'Educación': Book,
   'Servicios': Wifi
 };

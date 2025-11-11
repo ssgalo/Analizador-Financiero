@@ -1,45 +1,65 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, Image, AlertCircle, CheckCircle, FileUp, Sparkles } from "lucide-react";
+import { FileText, Image, AlertCircle, CheckCircle, FileUp, Sparkles, Loader2 } from "lucide-react";
 import ImportFileModal from "../components/ImportFileModal";
 import { useImportGasto, ImportedGastoData } from "../hooks/useImportGasto";
+import { gastosService } from "../services/api";
 
-const uploadHistory = [
-  {
-    id: 1,
-    fileName: "resumen_tarjeta_junio.pdf",
-    type: "PDF",
-    status: "procesado",
-    date: "2024-01-15",
-    gastos: 8,
-    monto: 45000,
-  },
-  {
-    id: 2,
-    fileName: "ticket_supermercado.jpg",
-    type: "Imagen",
-    status: "procesado",
-    date: "2024-01-14",
-    gastos: 1,
-    monto: 8750,
-  },
-  {
-    id: 3,
-    fileName: "factura_luz.pdf",
-    type: "PDF",
-    status: "procesado",
-    date: "2024-01-13",
-    gastos: 1,
-    monto: 12500,
-  },
-];
+interface HistorialItem {
+  id: number;
+  fileName: string;
+  type: string;
+  status: string;
+  date: string;
+  gastos: number;
+  monto: number;
+}
 
 export default function ImportarPage() {
   const navigate = useNavigate();
   const { isImportModalOpen, openImportModal, closeImportModal, handleDataExtracted } = useImportGasto();
   const [processingStatus, setProcessingStatus] = useState<string>("");
+  const [uploadHistory, setUploadHistory] = useState<HistorialItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Cargar historial de importaciones
+  useEffect(() => {
+    cargarHistorial();
+  }, []);
+
+  const cargarHistorial = async () => {
+    try {
+      setLoadingHistory(true);
+      // Obtener todos los gastos
+      const todosGastos = await gastosService.getGastos({});
+
+      // Filtrar solo los importados y tomar los últimos 3
+      const gastosImportados = todosGastos
+        .filter(gasto => gasto.fuente === 'importado')
+        .sort((a, b) => new Date(b.fecha_creacion || b.fecha).getTime() - new Date(a.fecha_creacion || a.fecha).getTime())
+        .slice(0, 3);
+
+      // Generar historial
+      const historial: HistorialItem[] = gastosImportados.map((gasto) => ({
+        id: gasto.id_gasto,
+        fileName: gasto.descripcion || 'Documento importado',
+        type: 'Imagen', // Por ahora asumimos imagen
+        status: 'procesado',
+        date: new Date(gasto.fecha).toLocaleDateString('es-AR'),
+        gastos: 1,
+        monto: gasto.monto
+      }));
+
+      setUploadHistory(historial);
+    } catch (error) {
+      console.error('Error cargando historial:', error);
+      setUploadHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   const handleImportComplete = (data: ImportedGastoData) => {
     handleDataExtracted(data);
@@ -74,7 +94,7 @@ export default function ImportarPage() {
                 Con OpenAI Vision analizamos tus documentos con precisión en segundos
               </p>
               <Button 
-                className="bg-teal hover:bg-teal/90 text-white px-8 py-6 text-lg"
+                className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-6 text-lg"
                 onClick={openImportModal}
               >
                 <FileUp className="mr-2 h-5 w-5" />
@@ -146,12 +166,26 @@ export default function ImportarPage() {
             <CardDescription>Documentos procesados recientemente</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {uploadHistory.map((upload) => (
-                <div
-                  key={upload.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-gray-50 transition-colors"
-                >
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <span className="ml-2 text-gray-600">Cargando historial...</span>
+              </div>
+            ) : uploadHistory.length === 0 ? (
+              <div className="text-center py-8">
+                <FileUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium mb-1">No hay importaciones aún</p>
+                <p className="text-sm text-gray-500">
+                  Los documentos que importes aparecerán aquí
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {uploadHistory.map((upload) => (
+                  <div
+                    key={upload.id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-gray-50 transition-colors"
+                  >
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
                       {upload.type === "PDF" ? (
@@ -210,7 +244,8 @@ export default function ImportarPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -362,6 +362,7 @@ CATEGORÍAS DISPONIBLES:
 2 = Transporte (combustible, nafta, diesel, peajes, taxis, Uber, Cabify, transporte público)
 3 = Vivienda (alquiler, expensas, mantenimiento de hogar)
 4 = Entretenimiento (cine, teatro, eventos, gimnasio, deportes, entretenimiento)
+13 = Salud y cuidado personal (farmacias, consultas médicas, medicamentos, productos de higiene, cosméticos)
 28 = Supermercado (supermercados, almacenes, compras de comestibles)
 30 = Suscripciones (servicios digitales, streaming, membresías online)
 26 = Otros (usa SOLO si no encaja en ninguna categoría anterior)
@@ -413,12 +414,14 @@ INSTRUCCIONES:
      * Transporte (2): "combustible", "nafta", "diesel", "litros", "YPF", "Shell", "Axion", "peaje", "taxi", "uber", "viaje"
      * Supermercado (28): "supermercado", "carrefour", "coto", "día", "disco", "jumbo", "walmart", productos variados (verduras + lácteos + limpieza)
      * Entretenimiento (4): "cine", "entrada", "teatro", "gimnasio", "deporte", "evento", "show"
+     * Salud y cuidado personal (13): "farmacia", "farmacity", "droguerías", "médico", "consulta", "medicamento", "remedio", "ibuprofeno", "paracetamol", "antibiótico", "shampoo", "crema", "maquillaje", "perfume", "cosméticos", "higiene"
      * Suscripciones (30): "suscripción", "mensual", "Netflix", "Spotify", "servicio digital"
      * Vivienda (3): "alquiler", "expensas", "reparación", "mantenimiento hogar"
    
    - Analiza el CONTEXTO completo, no solo el nombre
    - Si ves productos alimenticios listados → probablemente categoría 1 o 28
    - Si ves litros y precio por litro → probablemente categoría 2
+   - Si ves medicamentos, productos de higiene o cosméticos → probablemente categoría 13
    - DEFAULT: 26 (Otros) si no estás seguro
 
 6. CONFIANZA:

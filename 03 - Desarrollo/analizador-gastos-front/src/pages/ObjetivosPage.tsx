@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
-import { TrendingUp, Target, Calendar, Trash2, Plus, RefreshCw } from "lucide-react"
+import { TrendingUp, Target, Calendar, Trash2, Plus, RefreshCw, Edit, RotateCcw } from "lucide-react"
 import { objetivosService, type ObjetivoFinancieroCreate } from '../services/api'
 
 interface ObjetivoFinanciero {
@@ -19,13 +19,19 @@ export default function ObjetivosPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editando, setEditando] = useState(false)
+  const [objetivoEditando, setObjetivoEditando] = useState<ObjetivoFinanciero | null>(null)
+  const [objetivoAEliminar, setObjetivoAEliminar] = useState<number | null>(null)
   
-  const [formData, setFormData] = useState<Omit<ObjetivoFinancieroCreate, 'id_usuario'> & { id_usuario?: number }>({
+  const [formData, setFormData] = useState<Omit<ObjetivoFinancieroCreate, 'id_usuario'> & { 
+    id_usuario?: number
+    estado?: "en_progreso" | "completado" | "cancelado" | null
+  }>({
     descripcion: "",
     monto: 0,
     fecha_inicio: null,
     fecha_fin: null,
-    id_usuario: 6
+    id_usuario: 6,
+    estado: "en_progreso"
   })
 
   useEffect(() => {
@@ -61,25 +67,42 @@ export default function ObjetivosPage() {
         return
       }
 
-      const objetoCrear: ObjetivoFinancieroCreate = {
-        id_usuario: formData.id_usuario,
-        descripcion: formData.descripcion,
-        monto: formData.monto,
-        fecha_inicio: formData.fecha_inicio || null,
-        fecha_fin: formData.fecha_fin || null
-      }
+      if (objetivoEditando && objetivoEditando.id_objetivo) {
+        // Modo edición - actualizar objetivo existente
+        const datosActualizar = {
+          descripcion: formData.descripcion,
+          monto: formData.monto,
+          fecha_inicio: formData.fecha_inicio || null,
+          fecha_fin: formData.fecha_fin || null,
+          estado: formData.estado || "en_progreso"
+        }
+        
+        console.log('📤 Actualizando objetivo:', objetivoEditando.id_objetivo, datosActualizar)
+        await objetivosService.updateObjetivo(objetivoEditando.id_objetivo, datosActualizar)
+      } else {
+        // Modo creación - crear nuevo objetivo
+        const objetoCrear: ObjetivoFinancieroCreate = {
+          id_usuario: formData.id_usuario,
+          descripcion: formData.descripcion,
+          monto: formData.monto,
+          fecha_inicio: formData.fecha_inicio || null,
+          fecha_fin: formData.fecha_fin || null
+        }
 
-      console.log('📤 Enviando objetivo al backend:', objetoCrear)
-      await objetivosService.createObjetivo(objetoCrear)
+        console.log('📤 Creando nuevo objetivo:', objetoCrear)
+        await objetivosService.createObjetivo(objetoCrear)
+      }
       
       await cargarObjetivos()
       setEditando(false)
+      setObjetivoEditando(null)
       setFormData({
         descripcion: "",
         monto: 0,
         fecha_inicio: null,
         fecha_fin: null,
-        id_usuario: 6
+        id_usuario: 6,
+        estado: "en_progreso"
       })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al guardar'
@@ -89,15 +112,21 @@ export default function ObjetivosPage() {
   }
 
   const handleEliminar = async (id_objetivo: number) => {
-    if (!confirm("¿Estás seguro de eliminar este objetivo?")) return
+    setObjetivoAEliminar(id_objetivo)
+  }
+
+  const confirmarEliminacion = async () => {
+    if (!objetivoAEliminar) return
     
     try {
-      await objetivosService.deleteObjetivo(id_objetivo)
+      await objetivosService.deleteObjetivo(objetivoAEliminar)
       await cargarObjetivos()
+      setObjetivoAEliminar(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al eliminar'
       console.error('Error eliminando objetivo:', err)
       alert(errorMessage)
+      setObjetivoAEliminar(null)
     }
   }
 
@@ -112,6 +141,48 @@ export default function ObjetivosPage() {
     }
   }
 
+  const handleEditar = (objetivo: ObjetivoFinanciero) => {
+    console.log('🔍 Objetivo original:', objetivo)
+    console.log('📅 Fecha fin original:', objetivo.fecha_fin)
+    const fechaConvertida = convertirFechaParaInput(objetivo.fecha_fin)
+    console.log('📅 Fecha fin convertida:', fechaConvertida)
+    
+    setObjetivoEditando(objetivo)
+    setFormData({
+      descripcion: objetivo.descripcion,
+      monto: objetivo.monto,
+      fecha_inicio: convertirFechaParaInput(objetivo.fecha_inicio),
+      fecha_fin: fechaConvertida,
+      id_usuario: objetivo.id_usuario,
+      estado: obtenerEstado(objetivo.estado)
+    })
+    setEditando(true)
+  }
+
+  const handleReactivar = async (objetivo: ObjetivoFinanciero) => {
+    try {
+      await objetivosService.updateObjetivo(objetivo.id_objetivo!, { estado: "en_progreso" })
+      await cargarObjetivos()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al reactivar'
+      console.error('Error reactivando objetivo:', err)
+      alert(errorMessage)
+    }
+  }
+
+  const handleCancelarEdicion = () => {
+    setEditando(false)
+    setObjetivoEditando(null)
+    setFormData({
+      descripcion: "",
+      monto: 0,
+      fecha_inicio: null,
+      fecha_fin: null,
+      id_usuario: 6,
+      estado: "en_progreso"
+    })
+  }
+
   const formatearMoneda = (valor: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -123,7 +194,18 @@ export default function ObjetivosPage() {
 
   const formatearFecha = (fecha: string | null) => {
     if (!fecha) return "Sin fecha"
-    return new Date(fecha).toLocaleDateString('es-AR')
+    // Extraer solo la parte de la fecha sin conversión de zona horaria
+    const fechaISO = fecha.split('T')[0]
+    const [year, month, day] = fechaISO.split('-')
+    return `${day}/${month}/${year}`
+  }
+
+  // Convierte fecha ISO del backend a formato YYYY-MM-DD para input date
+  const convertirFechaParaInput = (fecha: string | null): string | null => {
+    if (!fecha) return null
+    // Extraer solo la parte de la fecha (YYYY-MM-DD) sin conversión de zona horaria
+    const fechaISO = fecha.split('T')[0]
+    return fechaISO
   }
 
   // ✅ SOLUCIÓN: Normalizar estado null a "en_progreso"
@@ -216,6 +298,15 @@ export default function ObjetivosPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditar(objetivo)}
+                          className="flex items-center gap-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Editar
+                        </Button>
                         {estadoNormalizado === "en_progreso" && (
                           <Button
                             size="sm"
@@ -223,6 +314,17 @@ export default function ObjetivosPage() {
                             onClick={() => handleCompletar(objetivo)}
                           >
                             Marcar Completado
+                          </Button>
+                        )}
+                        {(estadoNormalizado === "completado" || estadoNormalizado === "cancelado") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReactivar(objetivo)}
+                            className="flex items-center gap-1"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            Reactivar
                           </Button>
                         )}
                         <Button
@@ -253,8 +355,19 @@ export default function ObjetivosPage() {
             <p className="text-gray-600">Define y sigue tus metas de ahorro</p>
           </div>
           <button
-            onClick={() => setEditando(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            onClick={() => {
+              setObjetivoEditando(null)
+              setFormData({
+                descripcion: "",
+                monto: 0,
+                fecha_inicio: null,
+                fecha_fin: null,
+                id_usuario: 6,
+                estado: "en_progreso"
+              })
+              setEditando(true)
+            }}
+            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Nuevo Objetivo
@@ -305,8 +418,12 @@ export default function ObjetivosPage() {
         {editando && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Nuevo Objetivo Financiero</h2>
-              <p className="text-gray-600 mb-6">Define tu meta de ahorro</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                {objetivoEditando ? 'Editar Objetivo Financiero' : 'Nuevo Objetivo Financiero'}
+              </h2>
+              <p className="text-gray-600 mb-6">
+                {objetivoEditando ? 'Modifica los detalles de tu objetivo' : 'Define tu meta de ahorro'}
+              </p>
               
               <div className="space-y-4">
                 <div>
@@ -329,8 +446,8 @@ export default function ObjetivosPage() {
                   <input
                     type="number"
                     placeholder="0.00"
-                    value={formData.monto}
-                    onChange={(e) => setFormData({ ...formData, monto: parseFloat(e.target.value) || 0 })}
+                    value={formData.monto === 0 ? '' : formData.monto}
+                    onChange={(e) => setFormData({ ...formData, monto: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -346,11 +463,28 @@ export default function ObjetivosPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+
+                {objetivoEditando && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Estado
+                    </label>
+                    <select
+                      value={formData.estado || "en_progreso"}
+                      onChange={(e) => setFormData({ ...formData, estado: e.target.value as "en_progreso" | "completado" | "cancelado" })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="en_progreso">En Progreso</option>
+                      <option value="completado">Completado</option>
+                      <option value="cancelado">Cancelado</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 flex gap-3">
                 <button
-                  onClick={() => setEditando(false)}
+                  onClick={handleCancelarEdicion}
                   className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                 >
                   Cancelar
@@ -359,7 +493,34 @@ export default function ObjetivosPage() {
                   onClick={handleGuardar}
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
-                  Guardar Objetivo
+                  {objetivoEditando ? 'Actualizar Objetivo' : 'Guardar Objetivo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de confirmación de eliminación */}
+        {objetivoAEliminar && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4 p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Eliminar Objetivo</h2>
+              <p className="text-gray-600 mb-6">
+                ¿Estás seguro de eliminar este objetivo? Esta acción no se puede deshacer.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setObjetivoAEliminar(null)}
+                  className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarEliminacion}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Eliminar
                 </button>
               </div>
             </div>

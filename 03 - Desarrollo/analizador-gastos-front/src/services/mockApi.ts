@@ -76,7 +76,8 @@ const mockCategorias: Categoria[] = [
   { id_categoria: 5, nombre: "Compras", descripcion: "Ropa, electrónicos, varios", es_personalizada: false, color: "#13505B", icono: "ShoppingCart" },
   { id_categoria: 6, nombre: "Salud", descripcion: "Médicos, medicamentos, seguros", es_personalizada: false, color: "#A78BFA", icono: "Heart" },
   { id_categoria: 7, nombre: "Educación", descripcion: "Cursos, libros, capacitación", es_personalizada: false, color: "#F59E0B", icono: "Book" },
-  { id_categoria: 8, nombre: "Servicios", descripcion: "Suscripciones, servicios digitales", es_personalizada: false, color: "#8B5CF6", icono: "Wifi" }
+  { id_categoria: 8, nombre: "Servicios", descripcion: "Suscripciones, servicios digitales", es_personalizada: false, color: "#8B5CF6", icono: "Wifi" },
+  { id_categoria: 9, nombre: "Salud y cuidado personal", descripcion: "Médicos, farmacia, cuidado personal", es_personalizada: false, color: "#10b981", icono: "Heart" }
 ];
 
 const mockGastos: Gasto[] = [

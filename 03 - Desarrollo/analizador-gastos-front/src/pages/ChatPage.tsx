@@ -179,7 +179,7 @@ export default function ChatPage() {
             <button
               onClick={nuevaConversacion}
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Nueva Conversación

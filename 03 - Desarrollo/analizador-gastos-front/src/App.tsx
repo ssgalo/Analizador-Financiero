@@ -16,7 +16,6 @@ import ReportesPage from './pages/ReportesPage';
 import ConfiguracionPage from './pages/ConfiguracionPage';
 import ChatPage from './pages/ChatPage';
 import ImportarPage from './pages/ImportarPage';
-import IntegracionesPage from './pages/IntegracionesPage';
 import AcercaDePage from './pages/AcercaDePage';
 import MasOpcionesPage from './pages/MasOpcionesPage';
 
@@ -93,14 +92,6 @@ const App: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <ImportarPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/integraciones" element={
-            <ProtectedRoute>
-              <Layout>
-                <IntegracionesPage />
               </Layout>
             </ProtectedRoute>
           } />

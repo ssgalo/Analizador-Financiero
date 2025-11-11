@@ -24,6 +24,7 @@
   --color-entretenimiento: #EF5B5B;
   --color-compras: #13505B;
   --color-salud: #A78BFA;
+  --color-salud-cuidado-personal: #10b981;
   --color-educacion: #F59E0B;
   --color-servicios: #8B5CF6;
 
@@ -131,5 +132,6 @@
 .category-entretenimiento { color: var(--color-entretenimiento); }
 .category-compras { color: var(--color-compras); }
 .category-salud { color: var(--color-salud); }
+.category-salud-cuidado-personal { color: var(--color-salud-cuidado-personal); }
 .category-educacion { color: var(--color-educacion); }
 .category-servicios { color: var(--color-servicios); }

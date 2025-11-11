@@ -290,15 +290,13 @@ export default function ConfiguracionPage() {
                   <>
                     <Button
                       onClick={() => setIsEditing(true)}
-                      variant="outline"
-                      className="flex-1"
+                      className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
                     >
                       Editar Perfil
                     </Button>
                     <Button
                       onClick={() => setShowPasswordModal(true)}
-                      variant="outline"
-                      className="flex-1 flex items-center justify-center gap-2"
+                      className="flex-1 flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white"
                     >
                       <Key className="w-4 h-4" />
                       Cambiar Contraseña

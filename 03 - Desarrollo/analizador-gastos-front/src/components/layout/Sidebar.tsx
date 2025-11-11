@@ -6,10 +6,11 @@ import {
   TrendingUp, 
   MessageSquare, 
   Upload, 
-  Link as LinkIcon, 
   Settings, 
   LogOut,
-  LayoutGrid
+  FileText,
+  Target,
+  Info
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import logoApp from '../../assets/logoAPP.png';
@@ -30,13 +31,15 @@ const Sidebar: React.FC = () => {
     { path: '/ingresos', label: 'Ingresos', icon: TrendingUp },
     { path: '/chat', label: 'Chat IA', icon: MessageSquare },
     { path: '/importar', label: 'Importar', icon: Upload },
-    { path: '/integraciones', label: 'Integraciones', icon: LinkIcon },
-    { path: '/mas-opciones', label: 'Más Opciones', icon: LayoutGrid },
+    { path: '/reportes', label: 'Reportes', icon: FileText },
+    { path: '/objetivos', label: 'Objetivos', icon: Target },
+    { path: '/acerca-de', label: 'Acerca de', icon: Info },
   ];
 
   return (
-    <aside className="bg-white shadow-lg h-screen w-64 fixed left-0 top-0 overflow-y-auto">
-      <div className="p-6">
+    <aside className="bg-white shadow-lg h-screen w-64 fixed left-0 top-0 flex flex-col">
+      {/* Header con logo y usuario - no scrollea */}
+      <div className="flex-shrink-0 p-6">
         {/* Logo/Título de la aplicación */}
         <div className="mb-8">
           <div className="flex items-center space-x-3">
@@ -82,59 +85,58 @@ const Sidebar: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
 
-        {/* Menú de navegación */}
-        <nav className="space-y-2">
-          {menuItems.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`
-                  flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
-                  ${location.pathname === item.path
-                    ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }
-                `}
-              >
-                <IconComponent className="w-5 h-5" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+      {/* Menú de navegación - área con scroll */}
+      <nav className="flex-1 overflow-y-auto px-6 space-y-2">
+        {menuItems.map((item) => {
+          const IconComponent = item.icon;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`
+                flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
+                ${location.pathname === item.path
+                  ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}
+            >
+              <IconComponent className="w-5 h-5" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
+      {/* Footer con botones fijos - no scrollea */}
+      <div className="flex-shrink-0 p-6 space-y-2 border-t border-gray-200">
         {/* Botón Configuración */}
-        <div className="absolute bottom-20 left-6 right-6">
-          <Link
-            to="/configuracion"
-            className={`
-              w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
-              ${location.pathname === '/configuracion'
-                ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }
-            `}
-          >
-            <Settings className="w-5 h-5" />
-            <span>Configuración</span>
-          </Link>
-        </div>
+        <Link
+          to="/configuracion"
+          className={`
+            w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
+            ${location.pathname === '/configuracion'
+              ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }
+          `}
+        >
+          <Settings className="w-5 h-5" />
+          <span>Configuración</span>
+        </Link>
 
         {/* Botón de logout */}
-        <div className="absolute bottom-6 left-6 right-6">
-          <button
-            onClick={handleLogout}
-            data-testid="logout-button"
-            aria-label="Cerrar sesión y salir de la aplicación"
-            className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-          >
-            <LogOut className="w-5 h-5" aria-hidden="true" />
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
+        <button
+          onClick={handleLogout}
+          data-testid="logout-button"
+          aria-label="Cerrar sesión y salir de la aplicación"
+          className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+        >
+          <LogOut className="w-5 h-5" aria-hidden="true" />
+          <span>Cerrar Sesión</span>
+        </button>
       </div>
     </aside>
   );

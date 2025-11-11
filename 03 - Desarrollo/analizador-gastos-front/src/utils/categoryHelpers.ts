@@ -40,7 +40,8 @@ export const CATEGORIAS_GASTOS: CategoriaInfo[] = [
   { nombre: 'Entretenimiento', descripcion: 'Gastos en entretenimiento', color: '#ec4899', icono: '🎮' },
   { nombre: 'Vivienda', descripcion: 'Gastos relacionados a vivienda', color: '#3b82f6', icono: '🏠' },
   { nombre: 'Transporte', descripcion: 'Gastos en transporte', color: '#8b5cf6', icono: '🚗' },
-  { nombre: 'Suscripciones y membresías', descripcion: 'Servicios recurrentes', color: '#ef4444', icono: '📱' }
+  { nombre: 'Suscripciones y membresías', descripcion: 'Servicios recurrentes', color: '#ef4444', icono: '📱' },
+  { nombre: 'Salud y cuidado personal', descripcion: 'Gastos médicos, farmacia, cuidado personal', color: '#10b981', icono: '🏥' }
 ];
 
 /**
@@ -72,6 +73,7 @@ export const getCategoryIcon = (categoryName: string): LucideIcon => {
     'vivienda': HomeIcon,
     'entretenimiento': Smartphone,
     'salud': Heart,
+    'salud y cuidado personal': Heart,
     'educación': Book,
     'educacion': Book,
     'servicios': Wifi,
