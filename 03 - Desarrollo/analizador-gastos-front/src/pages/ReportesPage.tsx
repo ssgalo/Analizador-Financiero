@@ -25,8 +25,18 @@ import {
   RefreshCw,
   Calendar,
   CalendarDays,
-  CalendarRange
+  CalendarRange,
+  List
 } from 'lucide-react';
+
+interface Movimiento {
+  id: number;
+  fecha: string;
+  tipo: 'ingreso' | 'gasto';
+  descripcion: string;
+  categoria: string;
+  monto: number;
+}
 
 interface EstadisticaResumen {
   totalGastos: number;
@@ -43,6 +53,7 @@ interface EstadisticaResumen {
     ingresos: number;
     balance: number;
   }>;
+  movimientos: Movimiento[];
 }
 
 export default function ReportesPage() {
@@ -50,7 +61,9 @@ export default function ReportesPage() {
   const [error, setError] = useState<string | null>(null);
   const [fechaDesde, setFechaDesde] = useState<string>('');
   const [fechaHasta, setFechaHasta] = useState<string>('');
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState<'semanal' | 'mensual' | 'anual'>('mensual');
+  const [fechaDesdeInput, setFechaDesdeInput] = useState<string>('');
+  const [fechaHastaInput, setFechaHastaInput] = useState<string>('');
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState<'semanal' | 'mensual' | 'anual' | 'personalizado'>('mensual');
   const [estadisticas, setEstadisticas] = useState<EstadisticaResumen | null>(null);
 
   // Colores para los gráficos
@@ -125,8 +138,10 @@ export default function ReportesPage() {
         return;
       }
 
+      console.log('📅 Cargando datos con fechas:', { fechaDesde, fechaHasta });
+
       // Cargar datos en paralelo
-      const [gastos, ingresos, categorias] = await Promise.all([
+      const [gastosRaw, ingresos, categorias] = await Promise.all([
         gastosService.getGastos({
           fecha_desde: fechaDesde,
           fecha_hasta: fechaHasta,
@@ -140,10 +155,31 @@ export default function ReportesPage() {
         categoriasService.getCategorias({ limit: 100 })
       ]);
 
+      console.log('📊 Gastos recibidos del servidor:', gastosRaw.length);
+      console.log('📊 Primer gasto:', gastosRaw[0]);
+      console.log('📊 Fechas de gastos:', gastosRaw.map(g => g.fecha));
+
+      // Filtrar solo gastos confirmados (excluir eliminados y pendientes)
+      const gastosConfirmados = gastosRaw.filter(gasto => gasto.estado === 'confirmado');
+      
+      // Filtrar también por rango de fechas en el frontend (doble verificación)
+      const gastos = gastosConfirmados.filter(gasto => {
+        const fechaGasto = gasto.fecha.split('T')[0]; // Extraer solo la fecha (YYYY-MM-DD)
+        return fechaGasto >= fechaDesde && fechaGasto <= fechaHasta;
+      });
+      
+      console.log('✅ Gastos confirmados después de filtrar por estado:', gastosConfirmados.length);
+      console.log('✅ Gastos después de filtrar por fecha:', gastos.length);
+      console.log('✅ Montos de gastos confirmados:', gastos.map(g => g.monto));
+
       // Procesar estadísticas
       const totalGastos = gastos.reduce((sum, gasto) => sum + (parseFloat(String(gasto.monto)) || 0), 0);
       const totalIngresos = ingresos.reduce((sum, ingreso) => sum + (parseFloat(String(ingreso.monto)) || 0), 0);
       const balance = totalIngresos - totalGastos;
+
+      console.log('💰 Total gastos calculado:', totalGastos);
+      console.log('💰 Total ingresos calculado:', totalIngresos);
+      console.log('💰 Balance:', balance);
 
       // Gastos por categoría
       const gastosPorCat: Record<string, number> = {};
@@ -161,6 +197,35 @@ export default function ReportesPage() {
         }))
         .sort((a, b) => b.monto - a.monto);
 
+      // Crear lista de movimientos combinando gastos e ingresos
+      const movimientosGastos: Movimiento[] = gastos.map(gasto => {
+        const categoria = categorias.find(cat => cat.id_categoria === gasto.id_categoria);
+        return {
+          id: gasto.id_gasto,
+          fecha: gasto.fecha,
+          tipo: 'gasto' as const,
+          descripcion: gasto.descripcion || gasto.comercio || 'Sin descripción',
+          categoria: categoria?.nombre || 'Sin categoría',
+          monto: parseFloat(String(gasto.monto)) || 0
+        };
+      });
+
+      const movimientosIngresos: Movimiento[] = ingresos.map(ingreso => {
+        const categoria = categorias.find(cat => cat.id_categoria === ingreso.id_categoria);
+        return {
+          id: ingreso.id_ingreso,
+          fecha: ingreso.fecha,
+          tipo: 'ingreso' as const,
+          descripcion: ingreso.descripcion || 'Sin descripción',
+          categoria: categoria?.nombre || 'Sin categoría',
+          monto: parseFloat(String(ingreso.monto)) || 0
+        };
+      });
+
+      // Combinar y ordenar por fecha (más reciente primero)
+      const movimientos = [...movimientosGastos, ...movimientosIngresos]
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
       const tendenciaMensual = await generarTendenciaMensual();
 
       setEstadisticas({
@@ -168,7 +233,8 @@ export default function ReportesPage() {
         totalIngresos,
         balance,
         gastosPorCategoria,
-        tendenciaMensual
+        tendenciaMensual,
+        movimientos
       });
 
     } catch (err) {
@@ -191,7 +257,7 @@ export default function ReportesPage() {
       const fechaHastaStr = fechaFin.toISOString().split('T')[0];
 
       try {
-        const [gastosMes, ingresosMes] = await Promise.all([
+        const [gastosMesRaw, ingresosMes] = await Promise.all([
           gastosService.getGastos({
             fecha_desde: fechaDesdeStr,
             fecha_hasta: fechaHastaStr,
@@ -203,6 +269,15 @@ export default function ReportesPage() {
             limit: 1000
           })
         ]);
+
+        // Filtrar solo gastos confirmados
+        const gastosConfirmados = gastosMesRaw.filter(gasto => gasto.estado === 'confirmado');
+        
+        // Filtrar también por rango de fechas en el frontend (doble verificación)
+        const gastosMes = gastosConfirmados.filter(gasto => {
+          const fechaGasto = gasto.fecha.split('T')[0]; // Extraer solo la fecha (YYYY-MM-DD)
+          return fechaGasto >= fechaDesdeStr && fechaGasto <= fechaHastaStr;
+        });
 
         const totalGastosMes = gastosMes.reduce((sum, gasto) => sum + (parseFloat(String(gasto.monto)) || 0), 0);
         const totalIngresosMes = ingresosMes.reduce((sum, ingreso) => sum + (parseFloat(String(ingreso.monto)) || 0), 0);
@@ -245,9 +320,18 @@ export default function ReportesPage() {
     const nombres = {
       semanal: 'Últimos 7 días',
       mensual: 'Este mes',
-      anual: 'Este año'
+      anual: 'Este año',
+      personalizado: 'Período personalizado'
     };
     return nombres[periodoSeleccionado];
+  };
+
+  const aplicarPeriodoPersonalizado = () => {
+    if (fechaDesdeInput && fechaHastaInput) {
+      setFechaDesde(fechaDesdeInput);
+      setFechaHasta(fechaHastaInput);
+      setPeriodoSeleccionado('personalizado');
+    }
   };
 
   const exportarDatos = () => {
@@ -265,6 +349,15 @@ export default function ReportesPage() {
           cat.categoria,
           cat.monto.toFixed(2),
           `${cat.porcentaje.toFixed(1)}%`
+        ]),
+        ['', '', ''],
+        ['Fecha', 'Tipo', 'Descripción', 'Categoría', 'Monto'],
+        ...estadisticas.movimientos.map(mov => [
+          formatearFechaParaMostrar(mov.fecha),
+          mov.tipo === 'ingreso' ? 'Ingreso' : 'Gasto',
+          mov.descripcion,
+          mov.categoria,
+          mov.monto.toFixed(2)
         ])
       ];
 
@@ -366,39 +459,47 @@ export default function ReportesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart key="gastos-por-categoria-chart">
-                  <Pie
-                    data={estadisticas.gastosPorCategoria.slice(0, 8)}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="monto"
-                    nameKey="categoria"
-                    label={false}
-                  >
-                    {estadisticas.gastosPorCategoria.slice(0, 8).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORES[index % COLORES.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload[0]) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white p-2 border border-gray-300 rounded shadow">
-                            <p className="font-medium">{data.categoria}</p>
-                            <p className="text-sm">{formatearMoneda(data.monto)}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend content={() => null} />
-                </PieChart>
-              </ResponsiveContainer>
+              {estadisticas.gastosPorCategoria.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <PieIcon className="w-16 h-16 mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">No hay gastos para mostrar</p>
+                  <p className="text-sm mt-1">No se registraron gastos en el período seleccionado</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart key="gastos-por-categoria-chart">
+                    <Pie
+                      data={estadisticas.gastosPorCategoria.slice(0, 8)}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="monto"
+                      nameKey="categoria"
+                      label={false}
+                    >
+                      {estadisticas.gastosPorCategoria.slice(0, 8).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORES[index % COLORES.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload[0]) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-2 border border-gray-300 rounded shadow">
+                              <p className="font-medium">{data.categoria}</p>
+                              <p className="text-sm">{formatearMoneda(data.monto)}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend content={() => null} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
@@ -435,51 +536,129 @@ export default function ReportesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2">Categoría</th>
-                    <th className="text-right py-2">Monto</th>
-                    <th className="text-right py-2">Porcentaje</th>
-                    <th className="text-right py-2">Gráfico</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {estadisticas.gastosPorCategoria.map((categoria, index) => (
-                    <tr key={categoria.categoria} className="border-b">
-                      <td className="py-2">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: COLORES[index % COLORES.length] }}
-                          />
-                          {categoria.categoria}
-                        </div>
-                      </td>
-                      <td className="text-right py-2">
-                        {formatearMoneda(categoria.monto)}
-                      </td>
-                      <td className="text-right py-2">
-                        {categoria.porcentaje.toFixed(1)}%
-                      </td>
-                      <td className="text-right py-2">
-                        <div className="w-full max-w-20 ml-auto">
-                          <div className="h-2 rounded-full bg-gray-200">
-                            <div 
-                              className="h-full rounded-full"
-                              style={{ 
-                                width: `${categoria.porcentaje}%`,
-                                backgroundColor: COLORES[index % COLORES.length]
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
+            {estadisticas.gastosPorCategoria.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                <BarChart3 className="w-16 h-16 mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No hay gastos para mostrar</p>
+                <p className="text-sm mt-1">No se registraron gastos en el período seleccionado</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2">Categoría</th>
+                      <th className="text-right py-2">Monto</th>
+                      <th className="text-right py-2">Porcentaje</th>
+                      <th className="text-right py-2">Gráfico</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {estadisticas.gastosPorCategoria.map((categoria, index) => (
+                      <tr key={categoria.categoria} className="border-b">
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: COLORES[index % COLORES.length] }}
+                            />
+                            {categoria.categoria}
+                          </div>
+                        </td>
+                        <td className="text-right py-2">
+                          {formatearMoneda(categoria.monto)}
+                        </td>
+                        <td className="text-right py-2">
+                          {categoria.porcentaje.toFixed(1)}%
+                        </td>
+                        <td className="text-right py-2">
+                          <div className="w-full max-w-20 ml-auto">
+                            <div className="h-2 rounded-full bg-gray-200">
+                              <div 
+                                className="h-full rounded-full"
+                                style={{ 
+                                  width: `${categoria.porcentaje}%`,
+                                  backgroundColor: COLORES[index % COLORES.length]
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tabla de Todos los Movimientos */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <List className="w-5 h-5" />
+              Todos los Movimientos del Período
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              {estadisticas.movimientos.length} movimiento{estadisticas.movimientos.length !== 1 ? 's' : ''} encontrado{estadisticas.movimientos.length !== 1 ? 's' : ''}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              {estadisticas.movimientos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <List className="w-16 h-16 mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">No hay movimientos para mostrar</p>
+                  <p className="text-sm mt-1">No se registraron ingresos ni gastos en el período seleccionado</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2">Fecha</th>
+                      <th className="text-left py-3 px-2">Tipo</th>
+                      <th className="text-left py-3 px-2">Descripción</th>
+                      <th className="text-left py-3 px-2">Categoría</th>
+                      <th className="text-right py-3 px-2">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {estadisticas.movimientos.map((movimiento) => (
+                      <tr key={`${movimiento.tipo}-${movimiento.id}`} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-2 text-sm">
+                          {formatearFechaParaMostrar(movimiento.fecha)}
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            movimiento.tipo === 'ingreso' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {movimiento.tipo === 'ingreso' ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            {movimiento.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-sm">
+                          {movimiento.descripcion}
+                        </td>
+                        <td className="py-3 px-2 text-sm text-gray-600">
+                          {movimiento.categoria}
+                        </td>
+                        <td className={`py-3 px-2 text-sm font-medium text-right ${
+                          movimiento.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {movimiento.tipo === 'ingreso' ? '+' : '-'} {formatearMoneda(movimiento.monto)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -519,40 +698,79 @@ export default function ReportesPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { tipo: 'semanal' as const, icon: Calendar, label: 'Últimos 7 días' },
-                  { tipo: 'mensual' as const, icon: CalendarDays, label: 'Este mes' },
-                  { tipo: 'anual' as const, icon: CalendarRange, label: 'Este año' }
-                ].map(({ tipo, icon: Icon, label }) => (
-                  <button
-                    key={tipo}
-                    onClick={() => configurarPeriodo(tipo)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                      periodoSeleccionado === tipo
-                        ? 'bg-slate-500 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-              
-              {fechaDesde && fechaHasta && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-gray-600" />
-                    <p className="text-sm text-gray-700 font-medium">
-                      {getNombrePeriodo()}
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1 ml-6">
-                    {formatearFechaParaMostrar(fechaDesde)} - {formatearFechaParaMostrar(fechaHasta)}
-                  </p>
+              {/* Botones de período predefinido */}
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { tipo: 'semanal' as const, icon: Calendar, label: 'Últimos 7 días' },
+                    { tipo: 'mensual' as const, icon: CalendarDays, label: 'Este mes' },
+                    { tipo: 'anual' as const, icon: CalendarRange, label: 'Este año' }
+                  ].map(({ tipo, icon: Icon, label }) => (
+                    <button
+                      key={tipo}
+                      onClick={() => configurarPeriodo(tipo)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        periodoSeleccionado === tipo
+                          ? 'bg-slate-500 text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              )}
+                
+                {fechaDesde && fechaHasta && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <BarChart3 className="w-4 h-4 text-gray-600" />
+                    <div>
+                      <p className="text-sm text-gray-700 font-medium">
+                        {getNombrePeriodo()}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {formatearFechaParaMostrar(fechaDesde)} - {formatearFechaParaMostrar(fechaHasta)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Selector de período personalizado */}
+              <div className="pt-4 border-t border-gray-200">
+                <p className="text-sm font-medium text-gray-700 mb-3">O selecciona un período personalizado:</p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Fecha desde
+                    </label>
+                    <input
+                      type="date"
+                      value={fechaDesdeInput}
+                      onChange={(e) => setFechaDesdeInput(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Fecha hasta
+                    </label>
+                    <input
+                      type="date"
+                      value={fechaHastaInput}
+                      onChange={(e) => setFechaHastaInput(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    onClick={aplicarPeriodoPersonalizado}
+                    disabled={!fechaDesdeInput || !fechaHastaInput}
+                    className="px-6 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
