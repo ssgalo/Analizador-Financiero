@@ -42,6 +42,9 @@ from app.models.usuario import Usuario
 from app.models.gasto import Gasto
 from app.models.ingreso import Ingreso
 from app.models.categoria import Categoria
+from app.services.context_builder_service import ContextBuilderService
+from app.services.vector_search_service import VectorSearchService
+from app.services.embeddings_service import EmbeddingsService
 
 router = APIRouter()
 
@@ -49,8 +52,42 @@ router = APIRouter()
 # TODO: Migrar a base de datos para persistencia
 conversaciones = {}
 
+# Inicializar servicios de embeddings
+embeddings_service = EmbeddingsService()
+vector_search_service = VectorSearchService()
+context_builder_service = ContextBuilderService()
 
-def obtener_contexto_gastos(user_id: int, db: Session) -> str:
+
+async def obtener_contexto_con_embeddings(user_id: int, consulta: str, db: Session) -> str:
+    """
+    Genera contexto financiero usando búsqueda semántica con embeddings
+    
+    Args:
+        user_id: ID del usuario
+        consulta: Pregunta/mensaje del usuario
+        db: Sesión de base de datos
+        
+    Returns:
+        str: Contexto enriquecido con búsqueda semántica
+    """
+    try:
+        # Construir contexto usando el servicio que integra búsqueda semántica
+        contexto = await context_builder_service.construir_contexto_completo(
+            user_id=user_id,
+            consulta=consulta,
+            db=db,
+            limite_gastos=10,
+            limite_ingresos=5
+        )
+        return contexto
+        
+    except Exception as e:
+        # Si falla, usar el método tradicional como fallback
+        print(f"⚠️ Error en búsqueda con embeddings: {e}. Usando contexto tradicional.")
+        return obtener_contexto_gastos_tradicional(user_id, db)
+
+
+def obtener_contexto_gastos_tradicional(user_id: int, db: Session) -> str:
     """
     Genera el contexto financiero del usuario para el chatbot
     
@@ -329,9 +366,10 @@ async def enviar_mensaje(
             for msg in conversaciones[conversacion_id]["mensajes"]
         ]
         
+        # Obtener contexto usando búsqueda semántica con embeddings
         contexto_adicional = ""
         if user_id:
-            contexto_adicional = obtener_contexto_gastos(user_id, db)
+            contexto_adicional = await obtener_contexto_con_embeddings(user_id, request.mensaje, db)
         
         respuesta_ia = await adaptador.generar_respuesta(
             mensajes=historial,
@@ -428,10 +466,10 @@ async def enviar_mensaje_streaming(
                 for msg in conversaciones[conversacion_id]["mensajes"]
             ]
             
-            # Obtener contexto financiero
+            # Obtener contexto financiero usando búsqueda semántica con embeddings
             contexto_adicional = ""
             if user_id:
-                contexto_adicional = obtener_contexto_gastos(user_id, db)
+                contexto_adicional = await obtener_contexto_con_embeddings(user_id, request.mensaje, db)
             
             # Generar respuesta (sin streaming por ahora, simularemos)
             respuesta_ia = await adaptador.generar_respuesta(

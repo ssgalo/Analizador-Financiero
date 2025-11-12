@@ -30,7 +30,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import create_engine, text, select, func
 from sqlalchemy.orm import Session
-from app.core.database import get_db, engine
+from app.crud.session import SessionLocal
 from app.models.gasto import Gasto
 from app.models.ingreso import Ingreso
 from app.models.embeddings import GastoEmbedding, IngresoEmbedding
@@ -108,11 +108,11 @@ class PopulateEmbeddingsScript:
         """Obtiene IDs de registros que ya tienen embeddings."""
         if tipo == 'gastos':
             result = db.execute(
-                select(GastoEmbedding.id_gasto)
+                select(GastoEmbedding.gasto_id)
             ).scalars().all()
         else:
             result = db.execute(
-                select(IngresoEmbedding.id_ingreso)
+                select(IngresoEmbedding.ingreso_id)
             ).scalars().all()
         
         return set(result)
@@ -129,9 +129,9 @@ class PopulateEmbeddingsScript:
         if not self.force_regenerate:
             existing_ids = self.get_existing_embeddings(db, 'gastos')
             if existing_ids:
-                query = query.where(Gasto.id.not_in(existing_ids))
+                query = query.where(Gasto.id_gasto.not_in(existing_ids))
         
-        query = query.order_by(Gasto.id)
+        query = query.order_by(Gasto.id_gasto)
         
         return db.execute(query).scalars().all()
     
@@ -147,9 +147,9 @@ class PopulateEmbeddingsScript:
         if not self.force_regenerate:
             existing_ids = self.get_existing_embeddings(db, 'ingresos')
             if existing_ids:
-                query = query.where(Ingreso.id.not_in(existing_ids))
+                query = query.where(Ingreso.id_ingreso.not_in(existing_ids))
         
-        query = query.order_by(Ingreso.id)
+        query = query.order_by(Ingreso.id_ingreso)
         
         return db.execute(query).scalars().all()
     
@@ -170,13 +170,13 @@ class PopulateEmbeddingsScript:
                 )
                 
                 if not embedding_data:
-                    self.log_warning(f"No se pudo generar embedding para gasto {gasto.id}")
+                    self.log_warning(f"No se pudo generar embedding para gasto {gasto.id_gasto}")
                     self.stats['gastos_skipped'] += 1
                     continue
                 
                 # Verificar si ya existe
                 existing = db.query(GastoEmbedding).filter(
-                    GastoEmbedding.id_gasto == gasto.id
+                    GastoEmbedding.gasto_id == gasto.id
                 ).first()
                 
                 if existing and self.force_regenerate:
@@ -187,11 +187,11 @@ class PopulateEmbeddingsScript:
                     existing.fecha_actualizacion = datetime.now()
                     
                     if self.verbose:
-                        self.log_info(f"Actualizado embedding para gasto {gasto.id}")
+                        self.log_info(f"Actualizado embedding para gasto {gasto.id_gasto}")
                 elif not existing:
                     # Crear nuevo embedding
                     nuevo_embedding = GastoEmbedding(
-                        id_gasto=gasto.id,
+                        id_gasto=gasto.id_gasto,
                         id_usuario=gasto.id_usuario,
                         embedding=embedding_data['embedding'],
                         texto=embedding_data['texto'],
@@ -200,7 +200,7 @@ class PopulateEmbeddingsScript:
                     db.add(nuevo_embedding)
                     
                     if self.verbose:
-                        self.log_info(f"Creado embedding para gasto {gasto.id}")
+                        self.log_info(f"Creado embedding para gasto {gasto.id_gasto}")
                 else:
                     self.stats['gastos_skipped'] += 1
                     continue
@@ -212,7 +212,7 @@ class PopulateEmbeddingsScript:
                     db.commit()
                     
             except Exception as e:
-                self.log_error(f"Error procesando gasto {gasto.id}: {str(e)}")
+                self.log_error(f"Error procesando gasto {gasto.id_gasto}: {str(e)}")
                 self.stats['gastos_errors'] += 1
                 db.rollback()
         
@@ -243,13 +243,13 @@ class PopulateEmbeddingsScript:
                 )
                 
                 if not embedding_data:
-                    self.log_warning(f"No se pudo generar embedding para ingreso {ingreso.id}")
+                    self.log_warning(f"No se pudo generar embedding para ingreso {ingreso.id_ingreso}")
                     self.stats['ingresos_skipped'] += 1
                     continue
                 
                 # Verificar si ya existe
                 existing = db.query(IngresoEmbedding).filter(
-                    IngresoEmbedding.id_ingreso == ingreso.id
+                    IngresoEmbedding.ingreso_id == ingreso.id
                 ).first()
                 
                 if existing and self.force_regenerate:
@@ -260,11 +260,11 @@ class PopulateEmbeddingsScript:
                     existing.fecha_actualizacion = datetime.now()
                     
                     if self.verbose:
-                        self.log_info(f"Actualizado embedding para ingreso {ingreso.id}")
+                        self.log_info(f"Actualizado embedding para ingreso {ingreso.id_ingreso}")
                 elif not existing:
                     # Crear nuevo embedding
                     nuevo_embedding = IngresoEmbedding(
-                        id_ingreso=ingreso.id,
+                        id_ingreso=ingreso.id_ingreso,
                         id_usuario=ingreso.id_usuario,
                         embedding=embedding_data['embedding'],
                         texto=embedding_data['texto'],
@@ -273,7 +273,7 @@ class PopulateEmbeddingsScript:
                     db.add(nuevo_embedding)
                     
                     if self.verbose:
-                        self.log_info(f"Creado embedding para ingreso {ingreso.id}")
+                        self.log_info(f"Creado embedding para ingreso {ingreso.id_ingreso}")
                 else:
                     self.stats['ingresos_skipped'] += 1
                     continue
@@ -285,7 +285,7 @@ class PopulateEmbeddingsScript:
                     db.commit()
                     
             except Exception as e:
-                self.log_error(f"Error procesando ingreso {ingreso.id}: {str(e)}")
+                self.log_error(f"Error procesando ingreso {ingreso.id_ingreso}: {str(e)}")
                 self.stats['ingresos_errors'] += 1
                 db.rollback()
         
@@ -435,7 +435,7 @@ class PopulateEmbeddingsScript:
             print()
             
             # Crear sesión de base de datos
-            db = next(get_db())
+            db = SessionLocal()
             
             try:
                 # Procesar gastos
