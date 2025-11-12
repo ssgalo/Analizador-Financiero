@@ -386,3 +386,62 @@ class ContextBuilderService:
         
         truncated = text[:max_chars]
         return truncated + "\n[... contexto truncado ...]"
+    
+    async def construir_contexto_completo(
+        self,
+        user_id: int,
+        consulta: str,
+        db: Any,
+        limite_gastos: int = 10,
+        limite_ingresos: int = 5
+    ) -> str:
+        """
+        Construye contexto completo usando búsqueda semántica con embeddings.
+        
+        Args:
+            user_id: ID del usuario
+            consulta: Pregunta/mensaje del usuario
+            db: Sesión de base de datos SQLAlchemy
+            limite_gastos: Número máximo de gastos a incluir
+            limite_ingresos: Número máximo de ingresos a incluir
+        
+        Returns:
+            Contexto formateado como string
+        """
+        from app.services.vector_search_service import VectorSearchService
+        
+        try:
+            # Instanciar servicio de búsqueda vectorial
+            vector_search = VectorSearchService(db)
+            
+            # Buscar gastos e ingresos relevantes usando embeddings
+            gastos_resultados = await vector_search.buscar_gastos_similares(
+                user_id=user_id,
+                query_text=consulta,
+                limite=limite_gastos
+            )
+            
+            ingresos_resultados = await vector_search.buscar_ingresos_similares(
+                user_id=user_id,
+                query_text=consulta,
+                limite=limite_ingresos
+            )
+            
+            # Construir contexto desde los resultados
+            context = self.build_context_from_search(
+                gastos=gastos_resultados,
+                ingresos=ingresos_resultados,
+                user_query=consulta,
+                include_stats=True
+            )
+            
+            logger.info(
+                f"✅ Contexto con embeddings generado: "
+                f"{len(gastos_resultados)} gastos, {len(ingresos_resultados)} ingresos"
+            )
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"❌ Error construyendo contexto con embeddings: {e}", exc_info=True)
+            raise

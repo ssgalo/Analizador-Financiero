@@ -51,6 +51,9 @@ services:
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS}
     depends_on:
       postgres:
         condition: service_healthy

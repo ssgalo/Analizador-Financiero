@@ -1,23 +1,21 @@
 """
 Servicio de Embeddings
 ======================
-Genera embeddings vectoriales usando Azure OpenAI text-embedding-3-small
+Genera embeddings vectoriales usando Azure OpenAI o Google Gemini
 
 Responsabilidades:
-- Generar embeddings de texto usando Azure OpenAI
+- Generar embeddings de texto usando Azure OpenAI o Gemini
 - Procesar texto para optimizar la calidad de embeddings
 - Manejar errores y reintentos en llamadas a la API
 - Calcular costos de embeddings
 
 Autor: Sistema de Analizador Financiero
-Fecha: 11 noviembre 2025
+Fecha: 12 noviembre 2025
 """
 
 import os
 import logging
 from typing import List, Optional, Dict, Any
-from openai import AzureOpenAI
-from openai import OpenAIError
 import time
 
 logger = logging.getLogger(__name__)
@@ -25,26 +23,41 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingsService:
     """
-    Servicio para generar embeddings vectoriales usando Azure OpenAI.
+    Servicio para generar embeddings vectoriales usando Azure OpenAI o Google Gemini.
     
-    Usa el modelo text-embedding-3-small que genera vectores de 1536 dimensiones.
+    Soporta múltiples proveedores:
+    - Azure OpenAI: text-embedding-3-small (1536 dimensiones)
+    - Google Gemini: text-embedding-004 (768 dimensiones)
     """
-    
-    # Configuración del modelo
-    MODEL_NAME = "text-embedding-3-small"
-    EMBEDDING_DIMENSIONS = 1536
-    MAX_TOKENS = 8191  # Límite de tokens del modelo
-    COST_PER_1M_TOKENS = 0.02  # USD por 1M de tokens
     
     def __init__(self):
         """
-        Inicializa el cliente de Azure OpenAI.
+        Inicializa el cliente según el proveedor configurado.
         
-        Variables de entorno requeridas:
-        - AZURE_OPENAI_API_KEY: API key de Azure OpenAI
-        - AZURE_OPENAI_ENDPOINT: Endpoint de Azure OpenAI
-        - AZURE_OPENAI_EMBEDDING_DEPLOYMENT: Nombre del deployment de embeddings
+        Variables de entorno:
+        - EMBEDDING_PROVIDER: "azure" o "gemini" (default: azure)
+        
+        Para Azure OpenAI:
+        - AZURE_OPENAI_API_KEY
+        - AZURE_OPENAI_ENDPOINT
+        - AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        
+        Para Gemini:
+        - GEMINI_API_KEY
         """
+        self.provider = os.getenv("EMBEDDING_PROVIDER", "azure").lower()
+        
+        if self.provider == "gemini":
+            self._init_gemini()
+        else:
+            self._init_azure()
+        
+        logger.info(f"EmbeddingsService inicializado con proveedor: {self.provider}")
+    
+    def _init_azure(self):
+        """Inicializa cliente de Azure OpenAI"""
+        from openai import AzureOpenAI
+        
         self.api_key = os.getenv("AZURE_OPENAI_API_KEY")
         self.endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         self.deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small")
@@ -60,7 +73,26 @@ class EmbeddingsService:
             azure_endpoint=self.endpoint
         )
         
-        logger.info(f"EmbeddingsService inicializado con deployment: {self.deployment}")
+        self.model_name = "text-embedding-3-small"
+        self.embedding_dimensions = 1536
+        self.max_tokens = 8191
+        self.cost_per_1m_tokens = 0.02
+    
+    def _init_gemini(self):
+        """Inicializa cliente de Google Gemini"""
+        import google.generativeai as genai
+        
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        
+        if not self.api_key:
+            raise ValueError("Variable de entorno GEMINI_API_KEY es requerida")
+        
+        genai.configure(api_key=self.api_key)
+        
+        self.model_name = "models/text-embedding-004"
+        self.embedding_dimensions = 768
+        self.max_tokens = 2048
+        self.cost_per_1m_tokens = 0.0  # Gemini es gratis (con límites)
     
     def generate_embedding(
         self, 
@@ -77,7 +109,7 @@ class EmbeddingsService:
             retry_delay: Delay entre reintentos en segundos
         
         Returns:
-            Lista de floats representando el vector de 1536 dimensiones,
+            Lista de floats representando el vector,
             o None si hay un error irrecuperable
         """
         if not text or not text.strip():
@@ -89,44 +121,53 @@ class EmbeddingsService:
         
         for attempt in range(retry_count):
             try:
-                response = self.client.embeddings.create(
-                    model=self.deployment,
-                    input=cleaned_text
-                )
-                
-                # Extraer el vector de embedding
-                embedding = response.data[0].embedding
+                if self.provider == "gemini":
+                    embedding = self._generate_gemini_embedding(cleaned_text)
+                else:
+                    embedding = self._generate_azure_embedding(cleaned_text)
                 
                 # Validar dimensiones
-                if len(embedding) != self.EMBEDDING_DIMENSIONS:
+                if len(embedding) != self.embedding_dimensions:
                     logger.error(
-                        f"Dimensiones incorrectas: esperado {self.EMBEDDING_DIMENSIONS}, "
-                        f"recibido {len(embedding)}"
+                        f"Embedding con dimensiones incorrectas: "
+                        f"{len(embedding)} (esperado: {self.embedding_dimensions})"
                     )
                     return None
                 
-                # Log de uso
-                tokens_used = response.usage.total_tokens
-                cost = self._calculate_cost(tokens_used)
-                logger.debug(
-                    f"Embedding generado: {tokens_used} tokens, "
-                    f"costo: ${cost:.6f}"
-                )
-                
+                logger.debug(f"Embedding generado exitosamente ({len(embedding)} dimensiones)")
                 return embedding
                 
-            except OpenAIError as e:
-                logger.error(f"Error de OpenAI (intento {attempt + 1}/{retry_count}): {str(e)}")
+            except Exception as e:
+                logger.warning(
+                    f"Intento {attempt + 1}/{retry_count} falló: {type(e).__name__}: {str(e)}"
+                )
+                
                 if attempt < retry_count - 1:
                     time.sleep(retry_delay * (attempt + 1))  # Backoff exponencial
                 else:
-                    logger.error(f"Falló después de {retry_count} intentos")
+                    logger.error(f"Error generando embedding después de {retry_count} intentos")
                     return None
-            except Exception as e:
-                logger.error(f"Error inesperado generando embedding: {str(e)}")
-                return None
+    
+    def _generate_azure_embedding(self, text: str) -> List[float]:
+        """Genera embedding usando Azure OpenAI"""
+        response = self.client.embeddings.create(
+            model=self.deployment,
+            input=text
+        )
+        return response.data[0].embedding
+    
+    def _generate_gemini_embedding(self, text: str) -> List[float]:
+        """Genera embedding usando Google Gemini"""
+        import google.generativeai as genai
         
-        return None
+        result = genai.embed_content(
+            model=self.model_name,
+            content=text,
+            task_type="retrieval_document",  # Para documentos que se indexarán
+            title="Financial data"  # Opcional
+        )
+        
+        return result['embedding']
     
     def generate_embeddings_batch(
         self,
@@ -197,7 +238,7 @@ class EmbeddingsService:
         cleaned = " ".join(text.split())
         
         # Limitar longitud (dejar margen para el límite de tokens)
-        max_chars = self.MAX_TOKENS * 4  # Aproximadamente 4 chars por token
+        max_chars = self.max_tokens * 4  # Aproximadamente 4 chars por token
         if len(cleaned) > max_chars:
             cleaned = cleaned[:max_chars]
             logger.warning(f"Texto truncado de {len(text)} a {max_chars} caracteres")
@@ -333,7 +374,7 @@ class EmbeddingsService:
         return {
             "model": self.MODEL_NAME,
             "dimensions": self.EMBEDDING_DIMENSIONS,
-            "max_tokens": self.MAX_TOKENS,
+            "max_tokens": self.max_tokens,
             "cost_per_1m_tokens": self.COST_PER_1M_TOKENS,
             "deployment": self.deployment,
             "endpoint": self.endpoint.replace(self.api_key, "***") if self.endpoint else None

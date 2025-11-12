@@ -28,3 +28,6 @@ numpy==1.26.2
 
 # Vector embeddings con pgvector
 pgvector==0.2.4
+
+# Google Gemini para embeddings
+google-generativeai==0.3.2

@@ -52,10 +52,8 @@ router = APIRouter()
 # TODO: Migrar a base de datos para persistencia
 conversaciones = {}
 
-# Inicializar servicios de embeddings
+# Inicializar servicios de embeddings (sin db)
 embeddings_service = EmbeddingsService()
-vector_search_service = VectorSearchService()
-context_builder_service = ContextBuilderService()
 
 
 async def obtener_contexto_con_embeddings(user_id: int, consulta: str, db: Session) -> str:
@@ -71,6 +69,9 @@ async def obtener_contexto_con_embeddings(user_id: int, consulta: str, db: Sessi
         str: Contexto enriquecido con búsqueda semántica
     """
     try:
+        # Instanciar servicios con la sesión de DB
+        context_builder_service = ContextBuilderService()
+        
         # Construir contexto usando el servicio que integra búsqueda semántica
         contexto = await context_builder_service.construir_contexto_completo(
             user_id=user_id,

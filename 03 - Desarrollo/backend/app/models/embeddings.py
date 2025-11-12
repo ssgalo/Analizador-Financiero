@@ -3,16 +3,25 @@ Modelos de Embeddings
 =====================
 Modelos SQLAlchemy para las tablas de embeddings vectoriales
 
+Soporta múltiples dimensiones según el proveedor:
+- Azure OpenAI: 1536 dimensiones
+- Google Gemini: 768 dimensiones
+
 Autor: Sistema de Analizador Financiero
-Fecha: 11 noviembre 2025
+Fecha: 12 noviembre 2025
 """
 
+import os
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
 from app.crud.base import Base
+
+# Dimensiones del embedding según el proveedor
+# Azure: 1536, Gemini: 768
+EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "768"))
 
 
 class GastoEmbedding(Base):
@@ -33,7 +42,7 @@ class GastoEmbedding(Base):
         index=True
     )
     embedding = Column(
-        Vector(1536),  # Dimensión de text-embedding-3-small
+        Vector(EMBEDDING_DIMENSIONS),  # Dinámico: 768 (Gemini) o 1536 (Azure)
         nullable=False
     )
     texto_original = Column(
@@ -96,7 +105,7 @@ class IngresoEmbedding(Base):
         index=True
     )
     embedding = Column(
-        Vector(1536),  # Dimensión de text-embedding-3-small
+        Vector(EMBEDDING_DIMENSIONS),  # Dinámico: 768 (Gemini) o 1536 (Azure)
         nullable=False
     )
     texto_original = Column(
