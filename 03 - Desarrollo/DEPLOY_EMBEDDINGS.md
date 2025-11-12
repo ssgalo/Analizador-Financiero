@@ -62,8 +62,8 @@ EMBEDDING_DIMENSIONS=768
 
 # Azure OpenAI - Chat (tus credenciales actualizadas)
 AI_PROVIDER=azure
-AZURE_OPENAI_API_KEY=6uEN5Iwi039Qpqc0XLdb9HTUwNlMSPk31hMny56pdZp6VkKNse4lJQQJ99BJACHYHv6XJ3w3AAAAACOGUVNp
-AZURE_OPENAI_ENDPOINT=https://stvio-mgmg02az-eastus2.cognitiveservices.azure.com
+AZURE_OPENAI_API_KEY=tu_azure_openai_api_key_aqui
+AZURE_OPENAI_ENDPOINT=https://tu-endpoint.cognitiveservices.azure.com
 AZURE_OPENAI_DEPLOYMENT=model-router
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
 ```

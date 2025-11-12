@@ -6,9 +6,12 @@ import os
 from openai import AzureOpenAI
 
 # Configuración
-api_key = os.getenv("AZURE_OPENAI_API_KEY", "4TyWTlljROUfXziwFIawEFS5ocesDVhNe7bOKFSNXlx1akrHZ3r9JQQJ99BJACBsN54XJ3w3AAABACOGeH2f")
-endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://ia-aplicada-openai.openai.azure.com")
+api_key = os.getenv("AZURE_OPENAI_API_KEY")
+endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "model-router")
+
+if not api_key or not endpoint:
+    raise ValueError("Se requieren AZURE_OPENAI_API_KEY y AZURE_OPENAI_ENDPOINT como variables de entorno")
 
 print(f"🔍 Testeando deployment: {deployment}")
 print(f"📍 Endpoint: {endpoint}")
