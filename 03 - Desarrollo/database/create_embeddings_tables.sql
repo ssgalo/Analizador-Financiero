@@ -11,7 +11,7 @@
 -- ============================================================
 CREATE TABLE IF NOT EXISTS gastos_embeddings (
     id SERIAL PRIMARY KEY,
-    gasto_id INTEGER NOT NULL REFERENCES gastos(id) ON DELETE CASCADE,
+    gasto_id INTEGER NOT NULL REFERENCES gastos(id_gasto) ON DELETE CASCADE,
     embedding vector(1536) NOT NULL,  -- Dimensión de text-embedding-3-small de OpenAI
     texto_original TEXT NOT NULL,     -- Texto usado para generar el embedding
     metadata JSONB,                   -- Metadatos adicionales (categoría, monto, etc.)
@@ -49,7 +49,7 @@ ON gastos_embeddings(created_at DESC);
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ingresos_embeddings (
     id SERIAL PRIMARY KEY,
-    ingreso_id INTEGER NOT NULL REFERENCES ingresos(id) ON DELETE CASCADE,
+    ingreso_id INTEGER NOT NULL REFERENCES ingresos(id_ingreso) ON DELETE CASCADE,
     embedding vector(1536) NOT NULL,  -- Dimensión de text-embedding-3-small de OpenAI
     texto_original TEXT NOT NULL,     -- Texto usado para generar el embedding
     metadata JSONB,                   -- Metadatos adicionales (categoría, monto, etc.)

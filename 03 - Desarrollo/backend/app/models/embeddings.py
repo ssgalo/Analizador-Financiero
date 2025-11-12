@@ -41,7 +41,8 @@ class GastoEmbedding(Base):
         nullable=False,
         comment="Texto usado para generar el embedding"
     )
-    metadata = Column(
+    metadata_ = Column(
+        "metadata",  # Nombre real de la columna en la BD
         JSONB,
         nullable=True,
         comment="Metadatos adicionales (categoría, monto, fecha, etc.)"
@@ -103,7 +104,8 @@ class IngresoEmbedding(Base):
         nullable=False,
         comment="Texto usado para generar el embedding"
     )
-    metadata = Column(
+    metadata_ = Column(
+        "metadata",  # Nombre real de la columna en la BD
         JSONB,
         nullable=True,
         comment="Metadatos adicionales (categoría, monto, fecha, etc.)"

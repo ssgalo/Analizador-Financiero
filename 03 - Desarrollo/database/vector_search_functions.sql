@@ -33,18 +33,19 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT 
-        g.id AS gasto_id,
-        g.descripcion,
+        g.id_gasto AS gasto_id,
+        g.descripcion::TEXT,
         g.monto,
         g.fecha,
-        g.categoria,
-        g.moneda,
+        c.nombre AS categoria,
+        g.moneda::VARCHAR(10),
         -- Calcular similitud (1 - cosine distance)
-        (1 - (ge.embedding <=> query_embedding)) AS similarity,
+        (1 - (ge.embedding <=> query_embedding))::FLOAT AS similarity,
         ge.texto_original AS texto_embedding,
         ge.metadata
     FROM gastos_embeddings ge
-    INNER JOIN gastos g ON ge.gasto_id = g.id
+    INNER JOIN gastos g ON ge.gasto_id = g.id_gasto
+    LEFT JOIN categorias c ON g.id_categoria = c.id_categoria
     WHERE (1 - (ge.embedding <=> query_embedding)) >= similarity_threshold
     ORDER BY ge.embedding <=> query_embedding ASC  -- Menor distancia = mayor similitud
     LIMIT limit_results;
@@ -79,18 +80,19 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT 
-        i.id AS ingreso_id,
-        i.descripcion,
+        i.id_ingreso AS ingreso_id,
+        i.descripcion::TEXT,
         i.monto,
         i.fecha,
-        i.categoria,
-        i.moneda,
+        c.nombre AS categoria,
+        i.moneda::VARCHAR(10),
         -- Calcular similitud (1 - cosine distance)
-        (1 - (ie.embedding <=> query_embedding)) AS similarity,
+        (1 - (ie.embedding <=> query_embedding))::FLOAT AS similarity,
         ie.texto_original AS texto_embedding,
         ie.metadata
     FROM ingresos_embeddings ie
-    INNER JOIN ingresos i ON ie.ingreso_id = i.id
+    INNER JOIN ingresos i ON ie.ingreso_id = i.id_ingreso
+    LEFT JOIN categorias c ON i.id_categoria = c.id_categoria
     WHERE (1 - (ie.embedding <=> query_embedding)) >= similarity_threshold
     ORDER BY ie.embedding <=> query_embedding ASC  -- Menor distancia = mayor similitud
     LIMIT limit_results;
@@ -130,42 +132,43 @@ BEGIN
         -- Gastos
         SELECT 
             'gasto'::VARCHAR(10) AS transaction_type,
-            g.id AS transaction_id,
-            g.descripcion,
+            g.id_gasto AS transaction_id,
+            g.descripcion::TEXT,
             g.monto,
             g.fecha,
-            g.categoria,
-            g.moneda,
-            (1 - (ge.embedding <=> query_embedding)) AS similarity,
+            c.nombre AS categoria,
+            g.moneda::VARCHAR(10),
+            (1 - (ge.embedding <=> query_embedding))::FLOAT AS similarity,
             ge.texto_original AS texto_embedding,
-            ge.metadata
+            ge.metadata,
+            (ge.embedding <=> query_embedding) AS distance
         FROM gastos_embeddings ge
-        INNER JOIN gastos g ON ge.gasto_id = g.id
+        INNER JOIN gastos g ON ge.gasto_id = g.id_gasto
+        LEFT JOIN categorias c ON g.id_categoria = c.id_categoria
         WHERE (1 - (ge.embedding <=> query_embedding)) >= similarity_threshold
-        ORDER BY ge.embedding <=> query_embedding ASC
-        LIMIT limit_results
         
         UNION ALL
         
         -- Ingresos
         SELECT 
             'ingreso'::VARCHAR(10) AS transaction_type,
-            i.id AS transaction_id,
-            i.descripcion,
+            i.id_ingreso AS transaction_id,
+            i.descripcion::TEXT,
             i.monto,
             i.fecha,
-            i.categoria,
-            i.moneda,
-            (1 - (ie.embedding <=> query_embedding)) AS similarity,
+            c.nombre AS categoria,
+            i.moneda::VARCHAR(10),
+            (1 - (ie.embedding <=> query_embedding))::FLOAT AS similarity,
             ie.texto_original AS texto_embedding,
-            ie.metadata
+            ie.metadata,
+            (ie.embedding <=> query_embedding) AS distance
         FROM ingresos_embeddings ie
-        INNER JOIN ingresos i ON ie.ingreso_id = i.id
+        INNER JOIN ingresos i ON ie.ingreso_id = i.id_ingreso
+        LEFT JOIN categorias c ON i.id_categoria = c.id_categoria
         WHERE (1 - (ie.embedding <=> query_embedding)) >= similarity_threshold
-        ORDER BY ie.embedding <=> query_embedding ASC
-        LIMIT limit_results
     ) combined
-    ORDER BY similarity DESC;  -- Ordenar todos los resultados por similitud
+    ORDER BY similarity DESC  -- Ordenar todos los resultados por similitud
+    LIMIT limit_results * 2;   -- Limitar resultados totales
 END;
 $$ LANGUAGE plpgsql;
 
