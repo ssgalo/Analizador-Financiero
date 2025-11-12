@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: analizador-postgres
     restart: unless-stopped
     environment:
@@ -12,7 +12,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/init_pgvector.sql:/docker-entrypoint-initdb.d/02_init_pgvector.sql
+      - ./database/create_embeddings_tables.sql:/docker-entrypoint-initdb.d/03_create_embeddings_tables.sql
+      - ./database/vector_search_functions.sql:/docker-entrypoint-initdb.d/04_vector_search_functions.sql
     ports:
       - "${DB_PORT}:5432"
     networks:

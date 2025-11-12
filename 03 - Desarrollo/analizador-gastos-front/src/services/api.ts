@@ -209,7 +209,7 @@ export interface Gasto {
   comercio: string;
   id_categoria: number;
   categoria?: Categoria;
-  fuente: 'manual' | 'PDF' | 'imagen' | 'MercadoPago' | 'banco';
+  fuente: 'manual' | 'PDF' | 'imagen' | 'MercadoPago' | 'banco' | 'importado' | 'integracion';
   id_archivo_importado?: number;
   estado: 'confirmado' | 'eliminado' | 'pendiente'; // ✅ Cambiado: ahora usa los valores correctos de la BD
   fecha_creacion: string;
