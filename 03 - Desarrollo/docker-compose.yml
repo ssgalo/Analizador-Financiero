@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: analizador-postgres
     restart: unless-stopped
     environment:
@@ -12,7 +12,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/init_pgvector.sql:/docker-entrypoint-initdb.d/02_init_pgvector.sql
+      - ./database/create_embeddings_tables.sql:/docker-entrypoint-initdb.d/03_create_embeddings_tables.sql
+      - ./database/vector_search_functions.sql:/docker-entrypoint-initdb.d/04_vector_search_functions.sql
     ports:
       - "${DB_PORT}:5432"
     networks:
@@ -44,7 +47,13 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - DEBUG_MODE=${DEBUG_MODE}
       - TZ=${TZ}
+      - AI_PROVIDER=${AI_PROVIDER}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS}
     depends_on:
       postgres:
         condition: service_healthy
