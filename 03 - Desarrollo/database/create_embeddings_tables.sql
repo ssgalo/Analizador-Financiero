@@ -1,8 +1,9 @@
 -- ============================================================
 -- Script: create_embeddings_tables.sql
 -- Descripción: Crea las tablas para almacenar embeddings de gastos e ingresos
--- Fecha: 11 noviembre 2025
+-- Fecha: 13 noviembre 2025
 -- Orden de ejecución: 03 (después de init_pgvector.sql)
+-- DIMENSIONES: 768 (Google Gemini text-embedding-004)
 -- ============================================================
 
 -- ============================================================
@@ -12,7 +13,7 @@
 CREATE TABLE IF NOT EXISTS gastos_embeddings (
     id SERIAL PRIMARY KEY,
     gasto_id INTEGER NOT NULL REFERENCES gastos(id_gasto) ON DELETE CASCADE,
-    embedding vector(1536) NOT NULL,  -- Dimensión de text-embedding-3-small de OpenAI
+    embedding vector(768) NOT NULL,  -- Dimensión de text-embedding-004 de Google Gemini
     texto_original TEXT NOT NULL,     -- Texto usado para generar el embedding
     metadata JSONB,                   -- Metadatos adicionales (categoría, monto, etc.)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -50,7 +51,7 @@ ON gastos_embeddings(created_at DESC);
 CREATE TABLE IF NOT EXISTS ingresos_embeddings (
     id SERIAL PRIMARY KEY,
     ingreso_id INTEGER NOT NULL REFERENCES ingresos(id_ingreso) ON DELETE CASCADE,
-    embedding vector(1536) NOT NULL,  -- Dimensión de text-embedding-3-small de OpenAI
+    embedding vector(768) NOT NULL,  -- Dimensión de text-embedding-004 de Google Gemini
     texto_original TEXT NOT NULL,     -- Texto usado para generar el embedding
     metadata JSONB,                   -- Metadatos adicionales (categoría, monto, etc.)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

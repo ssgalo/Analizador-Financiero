@@ -9,24 +9,175 @@ Este módulo proporciona endpoints REST para:
 - Eliminar ingresos
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from typing import List, Optional
 from decimal import Decimal
+import logging
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.ingreso import Ingreso
 from app.models.moneda import Moneda
 from app.models.categoria import Categoria
 from app.models.usuario import Usuario
+from app.models.embeddings import IngresoEmbedding
 from app.schemas.ingreso import IngresoCreate, IngresoUpdate, IngresoResponse, IngresoWithCategoria, IngresoStats
+from app.services.embeddings_service import EmbeddingsService
+from app.crud.session import SessionLocal
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+# ==================== FUNCIONES AUXILIARES BACKGROUND ====================
+
+def _generar_embedding_ingreso_background(ingreso_id: int, usuario_id: int):
+    """
+    Función ejecutada en background para generar embedding de un ingreso.
+    
+    Args:
+        ingreso_id: ID del ingreso
+        usuario_id: ID del usuario (para validación)
+    """
+    db = SessionLocal()
+    try:
+        embeddings_service = EmbeddingsService()
+        
+        # Buscar el ingreso con sus relaciones
+        ingreso = db.query(Ingreso).filter(
+            Ingreso.id_ingreso == ingreso_id,
+            Ingreso.id_usuario == usuario_id
+        ).first()
+        
+        if not ingreso:
+            logger.warning(f"Ingreso {ingreso_id} no encontrado para generar embedding")
+            return
+        
+        # Verificar si ya existe embedding
+        existing = db.query(IngresoEmbedding).filter(
+            IngresoEmbedding.ingreso_id == ingreso_id
+        ).first()
+        
+        if existing:
+            logger.info(f"Embedding ya existe para ingreso {ingreso_id}, omitiendo")
+            return
+        
+        # Construir texto para el embedding
+        ingreso_dict = {
+            "descripcion": ingreso.descripcion,
+            "categoria": ingreso.categoria.nombre if ingreso.categoria else None,
+            "monto": ingreso.monto,
+            "moneda": ingreso.moneda,
+            "fecha": ingreso.fecha,
+            "fuente": ingreso.fuente
+        }
+        
+        texto = embeddings_service.build_ingreso_text(ingreso_dict)
+        embedding = embeddings_service.generate_embedding(texto)
+        
+        if not embedding:
+            logger.error(f"Error generando embedding para ingreso {ingreso_id}")
+            return
+        
+        # Guardar embedding
+        metadata = embeddings_service.build_metadata(ingreso_dict, "ingreso")
+        ingreso_embedding = IngresoEmbedding(
+            ingreso_id=ingreso.id_ingreso,
+            embedding=embedding,
+            texto_original=texto,
+            metadata=metadata
+        )
+        
+        db.add(ingreso_embedding)
+        db.commit()
+        logger.info(f"✅ Embedding generado exitosamente para ingreso {ingreso_id}")
+        
+    except Exception as e:
+        logger.error(f"Error en generación de embedding para ingreso {ingreso_id}: {str(e)}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+def _actualizar_embedding_ingreso_background(ingreso_id: int, usuario_id: int):
+    """
+    Función ejecutada en background para actualizar el embedding de un ingreso.
+    
+    Args:
+        ingreso_id: ID del ingreso
+        usuario_id: ID del usuario (para validación)
+    """
+    db = SessionLocal()
+    try:
+        embeddings_service = EmbeddingsService()
+        
+        # Buscar el ingreso con sus relaciones
+        ingreso = db.query(Ingreso).filter(
+            Ingreso.id_ingreso == ingreso_id,
+            Ingreso.id_usuario == usuario_id
+        ).first()
+        
+        if not ingreso:
+            logger.warning(f"Ingreso {ingreso_id} no encontrado para actualizar embedding")
+            return
+        
+        # Buscar embedding existente
+        existing = db.query(IngresoEmbedding).filter(
+            IngresoEmbedding.ingreso_id == ingreso_id
+        ).first()
+        
+        # Construir texto actualizado
+        ingreso_dict = {
+            "descripcion": ingreso.descripcion,
+            "categoria": ingreso.categoria.nombre if ingreso.categoria else None,
+            "monto": ingreso.monto,
+            "moneda": ingreso.moneda,
+            "fecha": ingreso.fecha,
+            "fuente": ingreso.fuente
+        }
+        
+        texto = embeddings_service.build_ingreso_text(ingreso_dict)
+        embedding = embeddings_service.generate_embedding(texto)
+        
+        if not embedding:
+            logger.error(f"Error generando embedding para ingreso {ingreso_id}")
+            return
+        
+        metadata = embeddings_service.build_metadata(ingreso_dict, "ingreso")
+        
+        if existing:
+            # Actualizar existente
+            existing.embedding = embedding
+            existing.texto_original = texto
+            existing.metadata = metadata
+            logger.info(f"✅ Embedding actualizado para ingreso {ingreso_id}")
+        else:
+            # Crear nuevo (por si no existía)
+            ingreso_embedding = IngresoEmbedding(
+                ingreso_id=ingreso.id_ingreso,
+                embedding=embedding,
+                texto_original=texto,
+                metadata=metadata
+            )
+            db.add(ingreso_embedding)
+            logger.info(f"✅ Embedding creado para ingreso {ingreso_id} (no existía)")
+        
+        db.commit()
+        
+    except Exception as e:
+        logger.error(f"Error actualizando embedding para ingreso {ingreso_id}: {str(e)}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+# ==================== ENDPOINTS ====================
 
 @router.post("/", response_model=IngresoResponse, status_code=status.HTTP_201_CREATED)
 def create_ingreso(
     ingreso_in: IngresoCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
@@ -95,6 +246,13 @@ def create_ingreso(
     
     # Expirar relaciones para evitar carga automática innecesaria
     db.expire(db_ingreso, ['categoria', 'usuario'])
+    
+    # 🚀 NUEVO: Generar embedding automáticamente en background
+    background_tasks.add_task(
+        _generar_embedding_ingreso_background,
+        db_ingreso.id_ingreso,
+        current_user.id_usuario
+    )
     
     return db_ingreso
 
@@ -347,6 +505,7 @@ def read_ingreso(
 def update_ingreso(
     ingreso_id: int,
     ingreso_update: IngresoUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
@@ -381,6 +540,13 @@ def update_ingreso(
     
     db.commit()
     db.refresh(db_ingreso)
+    
+    # 🚀 NUEVO: Actualizar embedding en background
+    background_tasks.add_task(
+        _actualizar_embedding_ingreso_background,
+        ingreso_id,
+        current_user.id_usuario
+    )
     
     return db_ingreso
 

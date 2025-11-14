@@ -16,6 +16,7 @@ services:
       - ./database/init_pgvector.sql:/docker-entrypoint-initdb.d/02_init_pgvector.sql
       - ./database/create_embeddings_tables.sql:/docker-entrypoint-initdb.d/03_create_embeddings_tables.sql
       - ./database/vector_search_functions.sql:/docker-entrypoint-initdb.d/04_vector_search_functions.sql
+      - ./database/add_password_reset_fields.sql:/docker-entrypoint-initdb.d/05_add_password_reset_fields.sql
     ports:
       - "${DB_PORT}:5432"
     networks:

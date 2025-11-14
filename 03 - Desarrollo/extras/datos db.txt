@@ -1,0 +1,5 @@
+Host/Server: localhost
+Port: 5432
+Database: analizador_financiero  
+Username: unlam
+Password: 

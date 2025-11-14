@@ -1,21 +1,22 @@
 -- ============================================================
 -- Script: vector_search_functions.sql
 -- Descripción: Funciones SQL para búsqueda vectorial en gastos e ingresos
--- Fecha: 11 noviembre 2025
+-- Fecha: 13 noviembre 2025
 -- Orden de ejecución: 04 (después de create_embeddings_tables.sql)
+-- DIMENSIONES: 768 (Google Gemini text-embedding-004)
 -- ============================================================
 
 -- ============================================================
 -- FUNCIÓN: search_gastos_by_vector
 -- Descripción: Busca gastos similares usando búsqueda vectorial
 -- Parámetros:
---   - query_embedding: Vector de consulta (1536 dimensiones)
+--   - query_embedding: Vector de consulta (768 dimensiones)
 --   - limit_results: Cantidad máxima de resultados (default: 10)
 --   - similarity_threshold: Umbral mínimo de similitud 0-1 (default: 0.7)
 -- Retorna: Tabla con gastos ordenados por similitud
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_gastos_by_vector(
-    query_embedding vector(1536),
+    query_embedding vector(768),
     limit_results INTEGER DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.7
 )
@@ -56,13 +57,13 @@ $$ LANGUAGE plpgsql;
 -- FUNCIÓN: search_ingresos_by_vector
 -- Descripción: Busca ingresos similares usando búsqueda vectorial
 -- Parámetros:
---   - query_embedding: Vector de consulta (1536 dimensiones)
+--   - query_embedding: Vector de consulta (768 dimensiones)
 --   - limit_results: Cantidad máxima de resultados (default: 10)
 --   - similarity_threshold: Umbral mínimo de similitud 0-1 (default: 0.7)
 -- Retorna: Tabla con ingresos ordenados por similitud
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_ingresos_by_vector(
-    query_embedding vector(1536),
+    query_embedding vector(768),
     limit_results INTEGER DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.7
 )
@@ -103,13 +104,13 @@ $$ LANGUAGE plpgsql;
 -- FUNCIÓN: search_combined_by_vector
 -- Descripción: Busca tanto en gastos como ingresos y combina resultados
 -- Parámetros:
---   - query_embedding: Vector de consulta (1536 dimensiones)
+--   - query_embedding: Vector de consulta (768 dimensiones)
 --   - limit_results: Cantidad máxima de resultados por tipo (default: 10)
 --   - similarity_threshold: Umbral mínimo de similitud 0-1 (default: 0.7)
 -- Retorna: Tabla combinada con tipo de transacción, ordenada por similitud
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_combined_by_vector(
-    query_embedding vector(1536),
+    query_embedding vector(768),
     limit_results INTEGER DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.7
 )
@@ -233,7 +234,7 @@ $$ LANGUAGE plpgsql;
 --   - monto_max: Filtro opcional monto máximo
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_gastos_with_filters(
-    query_embedding vector(1536),
+    query_embedding vector(768),
     limit_results INTEGER DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.7,
     categoria_filter VARCHAR(100) DEFAULT NULL,
@@ -281,7 +282,7 @@ $$ LANGUAGE plpgsql;
 -- Descripción: Búsqueda vectorial de ingresos con filtros adicionales
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_ingresos_with_filters(
-    query_embedding vector(1536),
+    query_embedding vector(768),
     limit_results INTEGER DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.7,
     categoria_filter VARCHAR(100) DEFAULT NULL,

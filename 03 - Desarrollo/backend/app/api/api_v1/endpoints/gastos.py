@@ -9,7 +9,7 @@ Este módulo proporciona endpoints REST para:
 - Eliminar gastos
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from typing import List, Optional
@@ -21,15 +21,164 @@ from app.models.gasto import Gasto
 from app.models.moneda import Moneda
 from app.models.categoria import Categoria
 from app.models.usuario import Usuario
+from app.models.embeddings import GastoEmbedding
 from app.schemas.gasto import GastoCreate, GastoUpdate, GastoResponse, GastoStats
 from app.services.tesseract_openai_service import get_ocr_service
+from app.services.embeddings_service import EmbeddingsService
+from app.crud.session import SessionLocal
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
+# ==================== FUNCIONES AUXILIARES BACKGROUND ====================
+
+def _generar_embedding_gasto_background(gasto_id: int, usuario_id: int):
+    """
+    Función ejecutada en background para generar embedding de un gasto.
+    
+    Args:
+        gasto_id: ID del gasto
+        usuario_id: ID del usuario (para validación)
+    """
+    db = SessionLocal()
+    try:
+        embeddings_service = EmbeddingsService()
+        
+        # Buscar el gasto con sus relaciones
+        gasto = db.query(Gasto).filter(
+            Gasto.id_gasto == gasto_id,
+            Gasto.id_usuario == usuario_id
+        ).first()
+        
+        if not gasto:
+            logger.warning(f"Gasto {gasto_id} no encontrado para generar embedding")
+            return
+        
+        # Verificar si ya existe embedding (por si acaso)
+        existing = db.query(GastoEmbedding).filter(
+            GastoEmbedding.gasto_id == gasto_id
+        ).first()
+        
+        if existing:
+            logger.info(f"Embedding ya existe para gasto {gasto_id}, omitiendo")
+            return
+        
+        # Construir texto para el embedding
+        gasto_dict = {
+            "descripcion": gasto.descripcion,
+            "categoria": gasto.categoria.nombre if gasto.categoria else None,
+            "monto": gasto.monto,
+            "moneda": gasto.moneda,
+            "fecha": gasto.fecha,
+            "comercio": gasto.comercio
+        }
+        
+        texto = embeddings_service.build_gasto_text(gasto_dict)
+        embedding = embeddings_service.generate_embedding(texto)
+        
+        if not embedding:
+            logger.error(f"Error generando embedding para gasto {gasto_id}")
+            return
+        
+        # Guardar embedding en la base de datos
+        metadata = embeddings_service.build_metadata(gasto_dict, "gasto")
+        gasto_embedding = GastoEmbedding(
+            gasto_id=gasto.id_gasto,
+            embedding=embedding,
+            texto_original=texto,
+            metadata=metadata
+        )
+        
+        db.add(gasto_embedding)
+        db.commit()
+        logger.info(f"✅ Embedding generado exitosamente para gasto {gasto_id}")
+        
+    except Exception as e:
+        logger.error(f"Error en generación de embedding para gasto {gasto_id}: {str(e)}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+def _actualizar_embedding_gasto_background(gasto_id: int, usuario_id: int):
+    """
+    Función ejecutada en background para actualizar el embedding de un gasto.
+    
+    Args:
+        gasto_id: ID del gasto
+        usuario_id: ID del usuario (para validación)
+    """
+    db = SessionLocal()
+    try:
+        embeddings_service = EmbeddingsService()
+        
+        # Buscar el gasto con sus relaciones
+        gasto = db.query(Gasto).filter(
+            Gasto.id_gasto == gasto_id,
+            Gasto.id_usuario == usuario_id
+        ).first()
+        
+        if not gasto:
+            logger.warning(f"Gasto {gasto_id} no encontrado para actualizar embedding")
+            return
+        
+        # Buscar embedding existente
+        existing = db.query(GastoEmbedding).filter(
+            GastoEmbedding.gasto_id == gasto_id
+        ).first()
+        
+        # Construir texto actualizado
+        gasto_dict = {
+            "descripcion": gasto.descripcion,
+            "categoria": gasto.categoria.nombre if gasto.categoria else None,
+            "monto": gasto.monto,
+            "moneda": gasto.moneda,
+            "fecha": gasto.fecha,
+            "comercio": gasto.comercio
+        }
+        
+        texto = embeddings_service.build_gasto_text(gasto_dict)
+        embedding = embeddings_service.generate_embedding(texto)
+        
+        if not embedding:
+            logger.error(f"Error generando embedding para gasto {gasto_id}")
+            return
+        
+        metadata = embeddings_service.build_metadata(gasto_dict, "gasto")
+        
+        if existing:
+            # Actualizar existente
+            existing.embedding = embedding
+            existing.texto_original = texto
+            existing.metadata = metadata
+            logger.info(f"✅ Embedding actualizado para gasto {gasto_id}")
+        else:
+            # Crear nuevo (por si no existía)
+            gasto_embedding = GastoEmbedding(
+                gasto_id=gasto.id_gasto,
+                embedding=embedding,
+                texto_original=texto,
+                metadata=metadata
+            )
+            db.add(gasto_embedding)
+            logger.info(f"✅ Embedding creado para gasto {gasto_id} (no existía)")
+        
+        db.commit()
+        
+    except Exception as e:
+        logger.error(f"Error actualizando embedding para gasto {gasto_id}: {str(e)}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+# ==================== ENDPOINTS ====================
+
 @router.post("/", response_model=GastoResponse, status_code=status.HTTP_201_CREATED)
 def create_gasto(
     gasto_in: GastoCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
@@ -86,6 +235,13 @@ def create_gasto(
     
     # Expirar relaciones para evitar carga automática innecesaria
     db.expire(db_gasto, ['categoria', 'usuario'])
+    
+    # 🚀 NUEVO: Generar embedding automáticamente en background
+    background_tasks.add_task(
+        _generar_embedding_gasto_background,
+        db_gasto.id_gasto,
+        current_user.id_usuario
+    )
     
     return db_gasto
 
@@ -254,6 +410,7 @@ def update_gasto(
     *,
     gasto_id: int,
     gasto_in: GastoUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
@@ -271,6 +428,14 @@ def update_gasto(
     db.add(db_gasto)
     db.commit()
     db.refresh(db_gasto)
+    
+    # 🚀 NUEVO: Actualizar embedding en background
+    background_tasks.add_task(
+        _actualizar_embedding_gasto_background,
+        gasto_id,
+        current_user.id_usuario
+    )
+    
     return db_gasto
 
 @router.delete("/{gasto_id}", response_model=GastoResponse)
