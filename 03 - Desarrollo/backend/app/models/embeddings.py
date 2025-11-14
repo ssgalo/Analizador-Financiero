@@ -69,7 +69,11 @@ class GastoEmbedding(Base):
     )
     
     # Relación con Gasto
-    gasto = relationship("Gasto", backref="embedding")
+    gasto = relationship(
+        "Gasto",
+        backref="embedding",
+        passive_deletes=True  # Delegar el CASCADE a PostgreSQL
+    )
     
     # Índices
     __table_args__ = (
@@ -132,7 +136,11 @@ class IngresoEmbedding(Base):
     )
     
     # Relación con Ingreso
-    ingreso = relationship("Ingreso", backref="embedding")
+    ingreso = relationship(
+        "Ingreso",
+        backref="embedding",
+        passive_deletes=True  # Delegar el CASCADE a PostgreSQL
+    )
     
     # Índices
     __table_args__ = (
