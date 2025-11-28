@@ -12,11 +12,9 @@ import React from 'react';
 import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
-import { Progress } from "../components/ui/progress"
 import {
   TrendingUp,
   TrendingDown,
-  CreditCard,
   PieChart,
   BarChart3,
   MessageSquare,
@@ -113,7 +111,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Tarjetas de Métricas Clave */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card data-testid="dashboard-gastos-card" aria-label="Total de gastos del mes">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gastos del Mes</CardTitle>
@@ -176,18 +174,6 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-600">
                 {ahorro >= 0 ? `${porcentajeAhorro.toFixed(1).replace('.', ',')}% de tus ingresos` : 'Déficit este mes'}
               </p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="dashboard-meta-card" aria-label="Meta de ahorro mensual">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Meta de Ahorro</CardTitle>
-              <Target className="h-4 w-4 text-golden" aria-hidden="true" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="dashboard-meta-valor">75%</div>
-              <Progress value={75} className="mt-2" />
-              <p className="text-xs text-gray-600 mt-1">$3,000 para alcanzar meta</p>
             </CardContent>
           </Card>
         </div>
@@ -368,15 +354,37 @@ const Home: React.FC = () => {
                 </Button>
               </Link>
               <Link to="/reportes">
-                <Button className="w-full justify-center bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
+                <Button 
+                  className="w-full justify-center bg-transparent transition-all duration-200" 
+                  variant="outline"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Ver Reportes
                 </Button>
               </Link>
-              <Link to="/integraciones">
-                <Button className="w-full justify-center bg-transparent hover:bg-slate-100 hover:border-slate-300" variant="outline">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Conectar Cuenta
+              <Link to="/objetivos">
+                <Button 
+                  className="w-full justify-center bg-transparent transition-all duration-200" 
+                  variant="outline"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Objetivos
                 </Button>
               </Link>
             </div>
